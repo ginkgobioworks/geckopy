@@ -122,6 +122,8 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+# upload jupytext converted notebooks instead of ipynb
+*.ipynb
 
 # pyenv
 .python-version
