@@ -2,7 +2,7 @@
 import logging
 from collections import defaultdict
 from functools import partial
-from typing import Union, Iterator
+from typing import Dict, Union, Iterator
 
 import cobra
 from cobra import Reaction, Metabolite
@@ -32,11 +32,12 @@ class Model(cobra.Model):
     groups : DictList
         A DictList where the key is the group identifier and the value a Group.
     solution : Solution
+        # TODO: separate proteins from cobra.Reactions
         The last obtained solution from optimizing the model.
 
     """
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: Dict):
         """Make sure all cobra.Objects in the model point to the model."""
         self.__dict__.update(state)
         for y in ["reactions", "genes", "metabolites", "proteins"]:
@@ -52,7 +53,7 @@ class Model(cobra.Model):
             self.proteins = DictList()
 
     def copy(self):
-        """Copy (deep) from `cobra.Model` + proteins."""
+        """Deepcopy from `cobra.Model` + proteins."""
         new = super().copy()
         # TODO: copy proteins
         new.proteins = DictList()
@@ -64,7 +65,10 @@ class Model(cobra.Model):
         metabolite_list: Iterator[Metabolite] = None,
         protein_list: Iterator[Protein] = None,
     ):
-        """Populate attached solver with LP problem given reactions + proteins."""
+        """Populate attached solver with LP problem given reactions + proteins.
+
+        Note that proteins are added both as Constraints and Variables.
+        """
         constraint_terms = defaultdict(lambda: defaultdict(float))
         to_add = []
         metabolite_list = metabolite_list if metabolite_list is not None else []
@@ -72,13 +76,11 @@ class Model(cobra.Model):
         if metabolite_list or protein_list:
             for met in metabolite_list + protein_list:
                 if met.id not in self.constraints:
+                    # this condition only applies when passing `protein_list`
                     to_add += [self.problem.Constraint(Zero, name=met.id, lb=0, ub=0)]
         self.add_cons_vars(to_add)
 
         for reaction in reaction_list + protein_list:
-            # reaction_id = (
-            #     reaction.id if reaction in reaction_list else f"{reaction.id}_ex"
-            # )
             reaction_id = reaction.id
 
             if reaction_id not in self.variables:
@@ -136,14 +138,13 @@ class Model(cobra.Model):
         self.proteins += pruned
         self._populate_solver([], None, self.proteins)
 
-    def add_reactions(self, reaction_list):
+    def add_reactions(self, reaction_list: Iterator[Reaction]):
         """Add reactions to the model.
 
         Reactions with identifiers identical to a reaction already in the
         model are ignored.
         The change is reverted upon exit when using the model as a context.
-        Enzyme Constrained: this have to be changed to avoid adding proteins
-        as metabolites.
+        Enzyme Constrained changes: avoid adding proteins as metabolites.
 
         Parameters
         ----------
@@ -153,9 +154,7 @@ class Model(cobra.Model):
 
         def existing_filter(rxn):
             if rxn.id in self.reactions:
-                LOGGER.warning(
-                    "Ignoring reaction '%s' since it already exists.", rxn.id
-                )
+                LOGGER.warning(f"Ignoring reaction '{rxn.id}' since it already exists.")
                 return False
             return True
 

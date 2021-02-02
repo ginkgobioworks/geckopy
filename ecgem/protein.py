@@ -27,7 +27,31 @@ class Protein:
     """Representation of an enzyme.
 
     A protein sets an upper bound to a set of reactions, given the kcat and
-    Molecular Weight. Adapted from `cobra.Reaction`.
+    concentration. Adapted from `cobra.Reaction`.
+
+    In terms of the inner LP model, `Proteins` populates both variables (as
+    pseudorreactions with the mentioned upper_bound) and constraints (as metabolites).
+
+    Attributes
+    ----------
+    id: str
+        identifier of protein, should be an Uniprot ID or "prot_<Uniprot ID>"
+    name: str
+        human readable name
+    concentration: float
+        parsed from `initialAmount` of `Species` in the SBML specification.
+    kcat: float
+        parsed from annotation of `Species`.
+    mw: float
+        TODO: parsed from initalParameters/calculate from formula
+    flux: float
+        value of flux of variable, only accessible after optimizing the model.
+    lower_bound: float
+        should be 0
+    upper_bound: float
+        concentration * kcat, it cannot be set directly
+    formula: str
+    charge: float
     """
 
     def __init__(
@@ -56,6 +80,7 @@ class Protein:
         if not UNIPROT_PATTERN.match(met.id):
             LOGGER.warning(f"Metabolite {met.id} does not use Uniprot ID.")
         self.id = met.id
+        self.name = met.name
         self._reaction = met._reaction
         self.charge = met.charge
         self.formula = met.formula
@@ -202,7 +227,7 @@ class Protein:
         return linear_reaction_coefficients(self.model, [self]).get(self, 0)
 
     @objective_coefficient.setter
-    def objective_coefficient(self, value):
+    def objective_coefficient(self, value: float):
         if self.model is None:
             raise AttributeError("Cannot assign objective to a missing model.")
         if self.flux_expression is not None:
@@ -222,7 +247,7 @@ class Protein:
 
     @bounds.setter
     @resettable
-    def bounds(self, value):
+    def bounds(self, value: (float, float)):
         lower, upper = value
         # Validate bounds before setting them.
         Reaction._check_bounds(lower, upper)
