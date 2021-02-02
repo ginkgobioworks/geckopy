@@ -201,11 +201,11 @@ def read_sbml_ec_model(
         met.compartment = specie.getCompartment()
         substance_units = specie.getSubstanceUnits()
         initial_amount = specie.getInitialAmount()
-        kcat = specie.getConversionFactor()
+        kcat = met.annotation["kcat"] if "kcat" in met.annotation else None
         try:
             kcat = float(kcat)
         except Exception:
-            kcat = 1
+            kcat = None
 
         specie_fbc = specie.getPlugin("fbc")  # type: libsbml.FbcSpeciesPlugin
         if specie_fbc:

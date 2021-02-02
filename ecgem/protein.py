@@ -124,13 +124,12 @@ class Protein:
         Taken from [Benjamín J Sánchez et al., 2016]
         (https://www.embopress.org/doi/full/10.15252/msb.20167411).
         """
-        return 1000
-        # return (
-        #     self.kcat * self.concentration
-        #     if self.kcat is not None and self.concentration is not None
-        #     # leave it unbounded if no experimental parameters were specified
-        #     else 1000
-        # )
+        return (
+            self.kcat * self.concentration
+            if self.kcat is not None and self.concentration is not None
+            # leave it unbounded if no experimental parameters were specified
+            else 1000
+        )
 
     @upper_bound.setter
     @resettable
