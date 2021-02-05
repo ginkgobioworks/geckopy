@@ -3,7 +3,7 @@
 import hashlib
 import logging
 import re
-from math import isinf
+from math import isinf, isnan
 from typing import Union
 
 from cobra.exceptions import OptimizationError
@@ -14,6 +14,7 @@ from cobra.util.solver import (
     set_objective,
 )
 from cobra.util.context import resettable
+from cobra.util.util import format_long_string
 
 
 LOGGER = logging.getLogger(__name__)
@@ -119,16 +120,20 @@ class Protein:
 
     @property
     def upper_bound(self):
-        """Get upper bounds as kcat * [E].
+        r"""Get upper bounds as [E] (conventionally in $\frac{mmol}{gDW}$).
+
+        [E] multiplied by the kcat (expressed in the reaction stoichiometry as
+        1/kcat) yields $\frac{mmol}/{gDW h}$.
 
         Taken from [Benjamín J Sánchez et al., 2016]
         (https://www.embopress.org/doi/full/10.15252/msb.20167411).
         """
         return (
-            self.kcat * self.concentration
-            if self.kcat is not None and self.concentration is not None
-            # leave it unbounded if no experimental parameters were specified
-            else 1000
+            config.upper_bound
+            if self.concentration is None
+            or isinf(self.concentration)
+            or isnan(self.concentration)
+            else self.concentration
         )
 
     @upper_bound.setter
@@ -267,3 +272,31 @@ class Protein:
     def model(self):
         """Retrieve the model the reaction is a part of."""
         return self._model
+
+    def __str__(self):
+        """Print str representation as id."""
+        return f"Protein {self.id}"
+
+    def _repr_html_(self):
+        return f"""
+        <table>
+            <tr>
+                <td><strong>Protein identifier</strong></td><td>{self.id}</td>
+            </tr><tr>
+                <td><strong>Name</strong></td><td>{format_long_string(self.name, 200)}
+                </td>
+            </tr><tr>
+                <td><strong>Memory address</strong></td>
+                <td>0x0%x{id(self)}</td>
+            </tr><tr>
+            </tr><tr>
+                <td><strong>Concentration</strong></td><td>{self.concentration}</td>
+            </tr><tr>
+                <td><strong>Upper bound</strong></td><td>{self.upper_bound}</td>
+            </tr><tr>
+                <td><strong>In {len(self.reactions)} reaction(s)</strong></td><td>
+                    {format_long_string(", ".join(r.id for r in self.reactions), 200)}
+                </td>
+            </tr>
+        </table>
+        """
