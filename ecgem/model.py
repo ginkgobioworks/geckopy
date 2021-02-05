@@ -1,16 +1,18 @@
 """Model class that extends `cobra.Model` to account for enzyme constraints."""
 import logging
 from collections import defaultdict
+from copy import copy, deepcopy
 from functools import partial
 from typing import Dict, Union, Iterator
 
 import cobra
-from cobra import Reaction, Metabolite
+from cobra import Metabolite
 from cobra.core.dictlist import DictList
 from cobra.util.context import get_context
 from optlang.symbolics import Zero
 
 from .protein import Protein
+from .reaction import Reaction
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,10 +55,128 @@ class Model(cobra.Model):
             self.proteins = DictList()
 
     def copy(self):
-        """Deepcopy from `cobra.Model` + proteins."""
-        new = super().copy()
-        # TODO: copy proteins
+        """Provide a partial 'deepcopy' of the Model.
+
+        All of the Metabolite, Gene, and Reaction objects are created anew but
+        in a faster fashion than deepcopy.
+        Enzyme constrained changes: also deepcopy proteins.
+        """
+        new = self.__class__()
+        do_not_copy_by_ref = {
+            "metabolites",
+            "reactions",
+            "proteins",
+            "genes",
+            "notes",
+            "annotation",
+            "groups",
+        }
+        for attr in self.__dict__:
+            if attr not in do_not_copy_by_ref:
+                new.__dict__[attr] = self.__dict__[attr]
+        new.notes = deepcopy(self.notes)
+        new.annotation = deepcopy(self.annotation)
+
+        new.metabolites = DictList()
+        do_not_copy_by_ref = {"_reaction", "_model"}
+        for metabolite in self.metabolites:
+            new_met = metabolite.__class__()
+            for attr, value in metabolite.__dict__.items():
+                if attr not in do_not_copy_by_ref:
+                    new_met.__dict__[attr] = copy(value) if attr == "formula" else value
+            new_met._model = new
+            new.metabolites.append(new_met)
+
         new.proteins = DictList()
+        for protein in self.proteins:
+            new_prot = protein.__class__()
+            for attr, value in protein.__dict__.items():
+                if attr not in do_not_copy_by_ref:
+                    new_prot.__dict__[attr] = (
+                        copy(value) if attr == "formula" else value
+                    )
+            new_prot._model = new
+            new.proteins.append(new_prot)
+
+        new.genes = DictList()
+        for gene in self.genes:
+            new_gene = gene.__class__(None)
+            for attr, value in gene.__dict__.items():
+                if attr not in do_not_copy_by_ref:
+                    new_gene.__dict__[attr] = (
+                        copy(value) if attr == "formula" else value
+                    )
+            new_gene._model = new
+            new.genes.append(new_gene)
+
+        new.reactions = DictList()
+        do_not_copy_by_ref = {"_model", "_metabolites", "_genes"}
+        for reaction in self.reactions:
+            new_reaction = reaction.__class__()
+            for attr, value in reaction.__dict__.items():
+                if attr not in do_not_copy_by_ref:
+                    new_reaction.__dict__[attr] = copy(value)
+            new_reaction._model = new
+            new.reactions.append(new_reaction)
+            # update awareness
+            for metabolite, stoic in reaction._metabolites.items():
+                if metabolite in new.proteins:
+                    new_met = new.proteins.get_by_id(metabolite.id)
+                    new_reaction._metabolites[new_met] = stoic
+                    new_met._reaction.add(new_reaction)
+                else:
+                    # regular met
+                    new_met = new.metabolites.get_by_id(metabolite.id)
+                    new_reaction._metabolites[new_met] = stoic
+                    new_met._reaction.add(new_reaction)
+            for gene in reaction._genes:
+                new_gene = new.genes.get_by_id(gene.id)
+                new_reaction._genes.add(new_gene)
+                new_gene._reaction.add(new_reaction)
+
+        new.groups = DictList()
+        do_not_copy_by_ref = {"_model", "_members"}
+        # Groups can be members of other groups. We initialize them first and
+        # then update their members.
+        for group in self.groups:
+            new_group = group.__class__(group.id)
+            for attr, value in group.__dict__.items():
+                if attr not in do_not_copy_by_ref:
+                    new_group.__dict__[attr] = copy(value)
+            new_group._model = new
+            new.groups.append(new_group)
+        for group in self.groups:
+            new_group = new.groups.get_by_id(group.id)
+            # update awareness, as in the reaction copies
+            new_objects = []
+            for member in group.members:
+                if isinstance(member, Metabolite):
+                    new_object = new.metabolites.get_by_id(member.id)
+                elif isinstance(member, Reaction):
+                    new_object = new.reactions.get_by_id(member.id)
+                elif isinstance(member, cobra.Gene):
+                    new_object = new.genes.get_by_id(member.id)
+                elif isinstance(member, cobra.Group):
+                    new_object = new.genes.get_by_id(member.id)
+                else:
+                    raise TypeError(
+                        "The group member {!r} is unexpectedly not a "
+                        "metabolite, reaction, gene, nor another "
+                        "group.".format(member)
+                    )
+                new_objects.append(new_object)
+            new_group.add_members(new_objects)
+
+        try:
+            new._solver = deepcopy(self.solver)
+            # Cplex has an issue with deep copies
+        except Exception:  # pragma: no cover
+            new._solver = copy(self.solver)  # pragma: no cover
+
+        # it doesn't make sense to retain the context of a copied model so
+        # assign a new empty context
+        new._contexts = list()
+
         return new
 
     def _populate_solver(
@@ -136,7 +256,7 @@ class Model(cobra.Model):
                 context(partial(setattr, x, "_model", None))
 
         self.proteins += pruned
-        self._populate_solver([], None, self.proteins)
+        self._populate_solver([], None, pruned)
 
     def add_reactions(self, reaction_list: Iterator[Reaction]):
         """Add reactions to the model.
@@ -212,3 +332,4 @@ class Model(cobra.Model):
 
         # from cameo ...
         self._populate_solver(pruned)
+
