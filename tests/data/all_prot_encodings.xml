@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version2" sboTerm="SBO:0000624" level="3" version="1" fbc:required="false" xmlns:groups="http://www.sbml.org/sbml/level3/version1/groups/version1" groups:required="false">
+  <model metaid="meta_M_eciML1515_v1__46__0" id="M_eciML1515_v1__46__0" name="ecModel of iML1515" fbc:strict="true">
+    <listOfSpecies>
+      <species id="dummy_prot" name="Mock protein that does not follow naming conventions" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false" fbc:charge="0"/>
+      <species id="M_prot_P0A825" name="Protein that follows naming convention and it is a member of the group Protein" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false" fbc:charge="0"/>
+      <species id="M_prot_P0A805" name="Protein that relies on naming convention and it is NOT a member of the group Protein" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false" fbc:charge="0"/>
+      <species id="normal_met" name="Normal metabolite that will be under model.metabolites" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false" fbc:charge="0"/>
+    </listOfSpecies>
+    <listOfGroups xmlns="http://www.sbml.org/sbml/level3/version1/groups/version1">
+      <group kind="classification" id="Protein">
+          <listOfMembers id="all_proteins">
+              <member idRef="M_prot_P0A825"/>
+              <member idRef="dummy_prot"/>
+          </listOfMembers>
+      </group>
+    </listOfGroups>
+  </model>
+</sbml>

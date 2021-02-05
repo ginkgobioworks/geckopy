@@ -24,3 +24,9 @@ def test_constrained_ec_model_is_not_cobra_model(
         water=0.3,
     )
     assert round(cobra_model.slim_optimize(), 4) != round(ec_model.slim_optimize(), 4)
+
+
+def test_from_cobrapy_works(cobra_model):
+    """Generate ec_gem from cobrapy_model."""
+    ec_model = ecgem.Model(cobra_model)
+    assert len(ec_model.proteins) == 1259

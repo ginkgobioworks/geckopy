@@ -30,6 +30,14 @@ def cobra_model(path_eciML1515):
 
 
 @pytest.fixture(scope="session")
+def dummy_ec_model():
+    """Load from cobrapy."""
+    return ecgem.io.read_sbml_ec_model(
+        join(dirname(__file__), "data", "all_prot_encodings.xml")
+    )
+
+
+@pytest.fixture(scope="session")
 def experimental_copy_number():
     """Load exp data.
 
