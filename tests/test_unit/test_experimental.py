@@ -21,8 +21,5 @@ def test_model_from_copy_number_can_grow(cobra_model, experimental_copy_number):
 
 def test_model_from_mmol_gDW_can_grow(cobra_model, experimental_mmol_gDW):
     processed_proteomics = pd.read_csv(experimental_mmol_gDW)
-    ec_model = from_mmol_gDW(
-        cobra_model,
-        processed_proteomics
-    )
+    ec_model = from_mmol_gDW(cobra_model, processed_proteomics)
     assert ec_model.slim_optimize() > 0

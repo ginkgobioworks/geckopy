@@ -3,9 +3,9 @@
 from os.path import dirname, join
 
 import cobra
-import ecgem
 import pytest
 
+import ecgem
 
 config = cobra.Configuration()
 config.solver = "glpk"

@@ -4,7 +4,7 @@ import re
 from collections import defaultdict
 from copy import copy, deepcopy
 from functools import partial
-from typing import Dict, Union, Iterator
+from typing import Dict, Iterator, Union
 
 import cobra
 from cobra import Metabolite
@@ -56,7 +56,9 @@ class Model(cobra.Model):
             # transform cobra.Metabolite's to ecgem.Protein's
             self.proteins = DictList()
             # naming convention
-            g_proteins = [met for met in self.metabolites if PROT_PATTERN.search(met.id)]
+            g_proteins = [
+                met for met in self.metabolites if PROT_PATTERN.search(met.id)
+            ]
             # group
             if state["groups"].query("Protein"):
                 g_proteins = state["groups"].Protein.members.copy()

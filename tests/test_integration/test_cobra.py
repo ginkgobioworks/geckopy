@@ -1,7 +1,8 @@
 """Ensure that ecgem is consistent with cobrapy."""
 
-import ecgem
 import pandas as pd
+
+import ecgem
 
 
 def test_unconstrained_ec_model_is_cobra_model(ec_model, cobra_model):

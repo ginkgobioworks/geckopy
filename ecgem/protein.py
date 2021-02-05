@@ -6,16 +6,15 @@ import re
 from math import isinf, isnan
 from typing import Union
 
+from cobra import Configuration, Metabolite, Reaction
 from cobra.exceptions import OptimizationError
-from cobra import Metabolite, Reaction, Configuration
+from cobra.util.context import resettable
 from cobra.util.solver import (
     check_solver_status,
     linear_reaction_coefficients,
     set_objective,
 )
-from cobra.util.context import resettable
 from cobra.util.util import format_long_string
-
 
 LOGGER = logging.getLogger(__name__)
 UNIPROT_PATTERN = re.compile(

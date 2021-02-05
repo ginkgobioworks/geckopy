@@ -32,6 +32,7 @@ from cobra.io.sbml import (
     _parse_notes_dict,
 )
 from cobra.util.solver import set_objective
+
 from ecgem.model import Model
 from ecgem.protein import Protein
 from ecgem.reaction import Reaction
