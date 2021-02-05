@@ -363,3 +363,19 @@ class Model(cobra.Model):
             self, reactions=self.proteins, metabolites=self.proteins
         )
         return solution, solution_prot
+
+    def add_boundary(
+        self,
+        metabolite,
+        type="exchange",
+        reaction_id=None,
+        lb=None,
+        ub=None,
+        sbo_term=None,
+    ):
+        """Add a boundary reaction for a given metabolite.
+
+        Enzyme constraint changes: return an ecgem.Reaction.
+        """
+        rxn = super().__init__(metabolite, type, reaction_id, lb, ub, sbo_term)
+        return Reaction(rxn)
