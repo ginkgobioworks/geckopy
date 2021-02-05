@@ -1,5 +1,6 @@
 """Model class that extends `cobra.Model` to account for enzyme constraints."""
 import logging
+import re
 from collections import defaultdict
 from copy import copy, deepcopy
 from functools import partial
@@ -15,6 +16,9 @@ from .protein import Protein
 from .reaction import Reaction
 
 LOGGER = logging.getLogger(__name__)
+PROT_PATTERN = re.compile(
+    r"prot_[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}"
+)
 
 
 class Model(cobra.Model):
@@ -42,9 +46,23 @@ class Model(cobra.Model):
     def __setstate__(self, state: Dict):
         """Make sure all cobra.Objects in the model point to the model."""
         self.__dict__.update(state)
-        for y in ["reactions", "genes", "metabolites", "proteins"]:
+        for y in ["reactions", "genes", "metabolites"]:
             for x in getattr(self, y):
                 x._model = self
+        if hasattr(self, "proteins"):
+            for x in getattr(self, y):
+                x._model = self
+        else:
+            # transform cobra.Metabolite's to ecgem.Protein's
+            self.proteins = DictList()
+            # naming convention
+            g_proteins = [met for met in self.metabolites if PROT_PATTERN.search(met.id)]
+            # group
+            if state["groups"].query("Protein"):
+                g_proteins = state["groups"].Protein.members.copy()
+            if g_proteins:
+                self.remove_metabolites(g_proteins)
+                self.add_proteins([Protein(prot) for prot in g_proteins])
         if not hasattr(self, "name"):
             self.name = None
 
