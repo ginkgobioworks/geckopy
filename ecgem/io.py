@@ -26,7 +26,6 @@ from cobra.io.sbml import (
     Gene,
     Group,
     Metabolite,
-    Reaction,
     _check_required,
     _get_doc_from_filename,
     _parse_annotations,
@@ -35,6 +34,7 @@ from cobra.io.sbml import (
 from cobra.util.solver import set_objective
 from ecgem.model import Model
 from ecgem.protein import Protein
+from ecgem.reaction import Reaction
 
 LOGGER = logging.getLogger(__name__)
 config = Configuration()
@@ -184,6 +184,9 @@ def read_sbml_ec_model(
 
     # Species
     metabolites = []
+    # proteins that rely on the naming convention "prot_UNIPROT_ID" will be
+    # catched here. Those who are annotated by groups membership will be parsed
+    # after the groups are processed.
     proteins = []
     boundary_metabolites = []
     if model.getNumSpecies() == 0:
@@ -199,7 +202,6 @@ def read_sbml_ec_model(
         met.notes = _parse_notes_dict(specie)
         met.annotation = _parse_annotations(specie)
         met.compartment = specie.getCompartment()
-        substance_units = specie.getSubstanceUnits()
         initial_amount = specie.getInitialAmount()
         kcat = met.annotation["kcat"] if "kcat" in met.annotation else None
         try:
@@ -247,7 +249,7 @@ def read_sbml_ec_model(
         if specie.getBoundaryCondition() is True:
             boundary_metabolites.append(met)
 
-        if substance_units != "prot mmol/gDW" and not PROT_PATTERN.match(met.id):
+        if not PROT_PATTERN.match(met.id):
             metabolites.append(met)
         else:
             proteins.append(Protein(met, concentration=initial_amount, kcat=kcat))
@@ -644,7 +646,10 @@ def read_sbml_ec_model(
                 if typecode == libsbml.SBML_SPECIES:
                     if f_replace and F_SPECIE in f_replace:
                         obj_id = f_replace[F_SPECIE](obj_id)
-                    cobra_member = ecgem_model.metabolites.get_by_id(obj_id)
+                    try:
+                        cobra_member = ecgem_model.metabolites.get_by_id(obj_id)
+                    except KeyError:
+                        cobra_member = ecgem_model.proteins.get_by_id(obj_id)
                 elif typecode == libsbml.SBML_REACTION:
                     if f_replace and F_REACTION in f_replace:
                         obj_id = f_replace[F_REACTION](obj_id)
@@ -684,6 +689,15 @@ def read_sbml_ec_model(
             groups.append(cobra_group)
 
     ecgem_model.add_groups(groups)
+
+    # now add everything under group Proteins to model.proteins if it was not
+    # already added based on naming conventions
+    if ecgem_model.groups.query("Protein"):
+        g_proteins = ecgem_model.groups.Protein.members.copy()
+        g_proteins = [prot for prot in g_proteins if prot not in ecgem_model.proteins]
+        if g_proteins:
+            ecgem_model.remove_metabolites(g_proteins)
+            ecgem_model.add_proteins([Protein(prot) for prot in g_proteins])
 
     # general hint for missing flux bounds
     if missing_bounds:
