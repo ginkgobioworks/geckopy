@@ -236,7 +236,7 @@ class Model(cobra.Model):
             else:
                 try:
                     reaction = self.reactions.get_by_id(reaction_id)
-                except:
+                except KeyError:
                     reaction = self.proteins.get_by_id(reaction_id)
                 forward_variable = reaction.forward_variable
                 reverse_variable = reaction.reverse_variable
