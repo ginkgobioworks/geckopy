@@ -1,6 +1,5 @@
 """Model class that extends `cobra.Model` to account for enzyme constraints."""
 import logging
-import re
 from collections import defaultdict
 from copy import copy, deepcopy
 from functools import partial
@@ -16,9 +15,6 @@ from .protein import Protein
 from .reaction import Reaction
 
 LOGGER = logging.getLogger(__name__)
-PROT_PATTERN = re.compile(
-    r"prot_[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}"
-)
 
 
 class Model(cobra.Model):
@@ -46,33 +42,43 @@ class Model(cobra.Model):
     def __setstate__(self, state: Dict):
         """Make sure all cobra.Objects in the model point to the model."""
         self.__dict__.update(state)
-        for y in ["reactions", "genes", "metabolites"]:
+        for y in ["reactions", "genes", "metabolites", "proteins"]:
             for x in getattr(self, y):
                 x._model = self
-        if hasattr(self, "proteins"):
-            for x in getattr(self, y):
-                x._model = self
-        else:
-            # transform cobra.Metabolite's to ecgem.Protein's
-            self.proteins = DictList()
-            # naming convention
-            g_proteins = [
-                met for met in self.metabolites if PROT_PATTERN.search(met.id)
-            ]
-            # group
-            if state["groups"].query("Protein"):
-                g_proteins = state["groups"].Protein.members.copy()
-            if g_proteins:
-                self.remove_metabolites(g_proteins)
-                self.add_proteins([Protein(prot) for prot in g_proteins])
         if not hasattr(self, "name"):
             self.name = None
 
     def __init__(self, id_or_model: Union[str, cobra.Model] = None, name: str = None):
         """Initialize model."""
-        super().__init__(id_or_model, name)
-        if isinstance(id_or_model, str):
-            self.proteins = DictList()
+        # TODO: refactor from cobra.Model so that internal matrix does not get
+        # repopulated 100 times
+        self.proteins = DictList()
+        if isinstance(id_or_model, cobra.Model) and not hasattr(
+            id_or_model, "proteins"
+        ):
+            super().__init__(id_or_model.id, name)
+            self.from_cobra(id_or_model)
+        else:
+            super().__init__(id_or_model, name)
+
+    def from_cobra(self, model):
+        """Create from cobra model."""
+        g_proteins = [met for met in model.metabolites if met.id.startswith("prot_")]
+        # groups
+        if model.groups.query("Protein"):
+            g_proteins += model.groups.Protein.members
+        g_proteins = set(g_proteins)
+        g_prot_id = {prot.id for prot in g_proteins}
+        self._solver = model.solver
+        self.add_proteins([Protein(prot) for prot in g_proteins])
+        self.add_metabolites(
+            [met for met in model.metabolites if met.id not in g_prot_id]
+        )
+        self.add_reactions(
+            [reac for reac in model.reactions if not reac.id.startswith("prot_")]
+        )
+        self.__setstate__(self.__dict__)
+        self._populate_solver(self.reactions, self.metabolites, self.proteins)
 
     def copy(self):
         """Provide a partial 'deepcopy' of the Model.
@@ -228,7 +234,10 @@ class Model(cobra.Model):
                 reverse_variable = self.problem.Variable(reaction.reverse_id)
                 self.add_cons_vars([forward_variable, reverse_variable])
             else:
-                reaction = self.reactions.get_by_id(reaction_id)
+                try:
+                    reaction = self.reactions.get_by_id(reaction_id)
+                except:
+                    reaction = self.proteins.get_by_id(reaction_id)
                 forward_variable = reaction.forward_variable
                 reverse_variable = reaction.reverse_variable
             for metabolite, coeff in reaction.metabolites.items():
@@ -372,13 +381,7 @@ class Model(cobra.Model):
         appropriate keyword argument.
 
         """
-        original_direction = self.objective.direction
-        self.objective.direction = {"maximize": "max", "minimize": "min"}.get(
-            objective_sense, original_direction
-        )
-        self.slim_optimize()
-        solution = cobra.core.get_solution(self, raise_error=raise_error)
-        self.objective.direction = original_direction
+        solution = super().optimize(objective_sense, raise_error)
         solution_prot = cobra.core.get_solution(
             self, reactions=self.proteins, metabolites=self.proteins
         )

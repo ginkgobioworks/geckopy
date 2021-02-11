@@ -6,7 +6,7 @@ import re
 from math import isinf, isnan
 from typing import Union
 
-from cobra import Configuration, Metabolite, Reaction
+from cobra import Configuration, Metabolite, Object, Reaction
 from cobra.exceptions import OptimizationError
 from cobra.util.context import resettable
 from cobra.util.solver import (
@@ -23,7 +23,7 @@ UNIPROT_PATTERN = re.compile(
 config = Configuration()
 
 
-class Protein:
+class Protein(Object):
     """Representation of an enzyme.
 
     A protein sets an upper bound to a set of reactions, given the kcat and
@@ -138,10 +138,8 @@ class Protein:
     @upper_bound.setter
     @resettable
     def upper_bound(self, value):
-        raise RuntimeError(
-            f"Tried to set value to upper_bound on protein {self.id}, which is "
-            "calculated from kcat * concentration. Set one of those instead."
-        )
+        self.concentration = value
+        self.update_variable_bounds()
 
     @property
     def flux(self):
