@@ -11,12 +11,12 @@ def test_unconstrained_ec_model_is_cobra_model(ec_model, cobra_model):
 
 
 def test_constrained_ec_model_is_not_cobra_model(
-    ec_model, cobra_model, path_eciML1515, experimental_copy_number
+    cobra_model, experimental_copy_number
 ):
-    """Check that unconstrained ec_model returns the same maximum as the plain model."""
+    """Check that constrained ec_model returns different maximum than the plain model."""
     raw_proteomics = pd.read_csv(experimental_copy_number)
     ec_model = ecgem.experimental.from_copy_number(
-        cobra_model,
+        cobra_model.copy(),
         index=raw_proteomics["uniprot"],
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],

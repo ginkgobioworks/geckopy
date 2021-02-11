@@ -17,13 +17,13 @@ def path_eciML1515():
     return join(dirname(__file__), "data", "eciML1515.xml.gz")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def ec_model(path_eciML1515):
     """Load from cobrapy."""
     return ecgem.io.read_sbml_ec_model(path_eciML1515)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def cobra_model(path_eciML1515):
     """Load from cobrapy."""
     return cobra.io.read_sbml_model(path_eciML1515)
