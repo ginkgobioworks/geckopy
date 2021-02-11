@@ -31,3 +31,12 @@ def test_protein_pseudoreactions_are_not_model_reactions(ec_model):
 def test_protein_are_not_model_metabolites(ec_model):
     """Ensure that model.metabolites is not polluted with proteins."""
     assert not ec_model.metabolites.query("prot_P75905")
+
+
+def test_kcats_retrieve_right_coefficients(ec_model):
+    """Test kcat interface."""
+    assert (
+        int(ec_model.proteins.get_by_id("prot_P75905").kcats["PUACGAMtrNo1"]) == -251997
+    )
+    ec_model.proteins.get_by_id("prot_P75905").kcats["PUACGAMtrNo1"] = -251997
+    assert ec_model.proteins.get_by_id("prot_P75905").kcats["PUACGAMtrNo1"] == -251997

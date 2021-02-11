@@ -1,9 +1,9 @@
 """Read and write SBML directly with `ecgem.Model`s.
 
-Proteins are Species with:
+Proteins are Species, members of Group Protein, with:
     - initialAmount: Concentration.
-    - substanceUnits: prot mmol/gDW.
-    - conversionFactor: kcat.
+    - boundary_condition: True
+
 The MW are initialAssingments.
 """
 
@@ -204,11 +204,6 @@ def read_sbml_ec_model(
         met.annotation = _parse_annotations(specie)
         met.compartment = specie.getCompartment()
         initial_amount = specie.getInitialAmount()
-        kcat = met.annotation["kcat"] if "kcat" in met.annotation else None
-        try:
-            kcat = float(kcat)
-        except Exception:
-            kcat = None
 
         specie_fbc = specie.getPlugin("fbc")  # type: libsbml.FbcSpeciesPlugin
         if specie_fbc:
@@ -253,7 +248,7 @@ def read_sbml_ec_model(
         if not PROT_PATTERN.match(met.id):
             metabolites.append(met)
         else:
-            proteins.append(Protein(met, concentration=initial_amount, kcat=kcat))
+            proteins.append(Protein(met, concentration=initial_amount))
 
     ecgem_model.add_metabolites(metabolites)
     ecgem_model.add_proteins(proteins)

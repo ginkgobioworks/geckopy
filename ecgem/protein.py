@@ -5,6 +5,7 @@ import logging
 import re
 from math import isinf, isnan
 from typing import Union
+from warnings import warn
 
 from cobra import Configuration, Metabolite, Object, Reaction
 from cobra.exceptions import OptimizationError
@@ -40,8 +41,8 @@ class Protein(Object):
         human readable name
     concentration: float
         parsed from `initialAmount` of `Species` in the SBML specification.
-    kcat: float
-        parsed from annotation of `Species`.
+    kcats: Kcats
+        1 / stoichimetry coefficients of its reactions.
     mw: float
         TODO: parsed from initalParameters/calculate from formula
     flux: float
@@ -63,7 +64,6 @@ class Protein(Object):
     ):
         """Initialize with id."""
         self.concentration = concentration
-        self.kcat = kcat
         self.mw = molecular_weight
         self._flux = None
         self.lower_bound = 0
@@ -74,6 +74,7 @@ class Protein(Object):
             self.id = id
             self.formula = ""
             self.charge = 0.0
+        self.kcats = Kcats(self)
 
     def from_metabolite(self, met: Metabolite):
         """Initialize `Protein` from `Metabolite`; i.e., when reading from SBML."""
@@ -297,3 +298,65 @@ class Protein(Object):
             </tr>
         </table>
         """
+
+
+class Kcats:
+    """Interface to modify kcats of a protein."""
+
+    def __init__(self, prot: Protein):
+        """Initialize with kcats from the model."""
+        self._protein = prot
+        self._update()
+
+    def _update(self):
+        """Build the map on the fly."""
+        self._reac_to_kcat = {
+            reac: 1 / reac.metabolites[self._protein]
+            for reac in self._protein.reactions
+        }
+
+    def __getitem__(self, key: Union[Reaction, str]):
+        """Return the kcat of the protein in the Reaaction `key`."""
+        self._update()
+        if self._model_warn(key, "get"):
+            return
+        if isinstance(key, str):
+            return self._reac_to_kcat[self._protein.model.reactions.get_by_id(key)]
+        else:
+            return self._reac_to_kcat[key]
+
+    def __setitem__(self, key: Union[Reaction, str], val: float):
+        """Assing kcat as `val` in the given `key` Reaction (as 1/kcat)."""
+        # TODO: wrong
+        if self._model_warn(key, "set"):
+            return
+        if isinstance(key, str):
+            reac = self._protein.model.reactions.get_by_id(key)
+        else:
+            reac = key
+        reac._metabolites[self._protein] = 1 / val
+
+    def _model_warn(self, key: Union[Reaction, str], action: str):
+        if not hasattr(self._protein, "model"):
+            warn(
+                f"Cannot set kcat of Protein {self._protein.id} which does not"
+                f" belong to any model (reaction: {key})."
+            )
+            return True
+
+    def __iter__(self):
+        """Iterate inner dict."""
+        return self._reac_to_kcat.__iter__()
+
+    def keys(self):
+        """Return inner dict's keys."""
+        return self._reac_to_kcat.keys()
+
+    def values(self):
+        """Return inner dict's values."""
+        return self._reac_to_kcat.values()
+
+    def __repr__(self):
+        """Represent inner dict."""
+        self._update()
+        return self._reac_to_kcat.__repr__()
