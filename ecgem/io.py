@@ -49,17 +49,25 @@ PROT_EX_PATTERN = re.compile(
 
 
 def read_sbml_ec_model(
-    filename, number=float, f_replace=F_REPLACE, set_missing_bounds=False, **kwargs
+    filename: str,
+    number: float = float,
+    f_replace: re.Pattern = F_REPLACE,
+    set_missing_bounds: bool = False,
+    hardcoded_rev_reactions: bool = True,
+    **kwargs,
 ) -> Model:
     """Create `ecgem.Model` from SBMLDocument.
 
     Parameters
     ----------
-    doc: libsbml.SBMLDocument
+    filename: str
     number: data type of stoichiometry: {float, int}
         In which data type should the stoichiometry be parsed.
     f_replace : dict of replacement functions for id replacement
     set_missing_bounds : flag to set missing bounds
+    hardcoded_rev_reactions: bool
+        if reversible reaction to account for proteins being consumed on both
+        directions are written explicitly for in the SBML
 
     Returns
     -------
@@ -116,7 +124,7 @@ def read_sbml_ec_model(
     model_id = model.getIdAttribute()
     if not libsbml.SyntaxChecker.isValidSBMLSId(model_id):
         LOGGER.error("'%s' is not a valid SBML 'SId'." % model_id)
-    ecgem_model = Model(model_id)
+    ecgem_model = Model(model_id, hardcoded_rev_reactions=hardcoded_rev_reactions)
     ecgem_model.name = model.getName()
 
     # meta information

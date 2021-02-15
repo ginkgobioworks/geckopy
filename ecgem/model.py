@@ -48,11 +48,17 @@ class Model(cobra.Model):
         if not hasattr(self, "name"):
             self.name = None
 
-    def __init__(self, id_or_model: Union[str, cobra.Model] = None, name: str = None):
+    def __init__(
+        self,
+        id_or_model: Union[str, cobra.Model] = None,
+        name: str = None,
+        hardcoded_rev_reactions: bool = True,
+    ):
         """Initialize model."""
         # TODO: refactor from cobra.Model so that internal matrix does not get
         # repopulated 100 times
         self.proteins = DictList()
+        self.hardcoded_rev_reactions = hardcoded_rev_reactions
         if isinstance(id_or_model, cobra.Model) and not hasattr(
             id_or_model, "proteins"
         ):
@@ -249,7 +255,15 @@ class Model(cobra.Model):
                     )
                     self.add_cons_vars(constraint, sloppy=True)
                 constraint_terms[constraint][forward_variable] = coeff
-                constraint_terms[constraint][reverse_variable] = -coeff
+                # if a reaction is reversible, the protein is used on both
+                # directions
+                constraint_terms[constraint][reverse_variable] = (
+                    coeff
+                    if not self.hardcoded_rev_reactions
+                    and metabolite in self.proteins
+                    and reaction.reversibility
+                    else -coeff
+                )
 
         self.solver.update()
         for reaction in reaction_list:
@@ -320,14 +334,12 @@ class Model(cobra.Model):
                 target = (
                     self.proteins if metabolite in self.proteins else self.metabolites
                 )
-                # TODO: Should we add a copy of the metabolite instead?
                 if metabolite not in target:
                     self.add_metabolites(metabolite)
 
                 # A copy of the metabolite exists in the model, the reaction
                 # needs to point to the metabolite in the model.
                 else:
-                    # FIXME: Modifying 'private' attributes is horrible.
                     stoichiometry = reaction._metabolites.pop(metabolite)
 
                     model_metabolite = target.get_by_id(metabolite.id)
