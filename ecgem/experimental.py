@@ -20,18 +20,22 @@ def limit_proteins(model: cobra.Model, measurements: pd.DataFrame):
         Protein abundances in mmol / gDW.
 
     """
-    # TODO: rely on .proteins instead of naming conventions once it's impled
+    is_ec_model = hasattr(model, "proteins")
     for protein_id, measure in measurements.items():
         try:
-            if hasattr(model, "proteins"):
-                rxn = model.proteins.get_by_id(f"prot_{protein_id}")
-            else:
-                rxn = model.reactions.get_by_id(f"prot_{protein_id}_exchange")
+            rxn = (
+                model.proteins.get_by_id(f"prot_{protein_id}")
+                if is_ec_model
+                else model.reactions.get_by_id(f"prot_{protein_id}_exchange")
+            )
         except KeyError:
             pass
         else:
             # update only upper_bound (as enzymes can be unsaturated):
-            rxn.upper_bound = measure
+            if is_ec_model:
+                rxn.add_concentration(measure)
+            else:
+                rxn.upper_bound = measure
 
 
 def from_mmol_gDW(

@@ -68,6 +68,7 @@ class Protein(Object):
         self._flux = None
         self.lower_bound = 0
         self._reaction = set()
+        self._ub = config.upper_bound
         if isinstance(id, Metabolite):
             self.from_metabolite(id)
         else:
@@ -129,7 +130,7 @@ class Protein(Object):
         (https://www.embopress.org/doi/full/10.15252/msb.20167411).
         """
         return (
-            config.upper_bound
+            self._ub
             if self.concentration is None
             or isinf(self.concentration)
             or isnan(self.concentration)
@@ -138,7 +139,12 @@ class Protein(Object):
 
     @upper_bound.setter
     @resettable
-    def upper_bound(self, value):
+    def upper_bound(self, value: float):
+        self._ub = value
+        self.update_variable_bounds()
+
+    def add_concentration(self, value: float):
+        """Add concentration value."""
         self.concentration = value
         self.update_variable_bounds()
 
