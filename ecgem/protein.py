@@ -113,13 +113,6 @@ class Protein(Object):
             )
 
     @property
-    def reverse_id(self):
-        """Generate the id of reverse_variable from the reaction's id."""
-        return "_".join(
-            (self.id, "reverse", hashlib.md5(self.id.encode("utf-8")).hexdigest()[0:5])
-        )
-
-    @property
     def upper_bound(self):
         r"""Get upper bounds as [E] (conventionally in $\frac{mmol}{gDW}$).
 
@@ -144,9 +137,20 @@ class Protein(Object):
         self.update_variable_bounds()
 
     def add_concentration(self, value: float):
-        """Add concentration value."""
+        """Add concentration value.
+
+        It will unsuscribe the protein to the common protein pool, if suscribed.
+        """
         self.concentration = value
+        self.unsuscribe_to_pool()
         self.update_variable_bounds()
+
+    @property
+    def reverse_id(self):
+        """Generate the id of reverse_variable from the reaction's id."""
+        return "_".join(
+            (self.id, "reverse", hashlib.md5(self.id.encode("utf-8")).hexdigest()[0:5])
+        )
 
     @property
     def flux(self):
@@ -307,7 +311,22 @@ class Protein(Object):
 
 
 class Kcats:
-    """Interface to modify kcats of a protein."""
+    """Interface to modify kcats of a protein.
+
+    The user interacts with kcats in 1/s, translated to h to the model in the
+    form stoichiometry coefficients of protein participating in a given reaction.
+
+    Example
+    -------
+    ```
+    # dictionary of Reaction to kcat in s
+    model.proteins.prot_P0A796.kcats
+    # the user inputs the kcat in 1/s
+    model.proteins.prot_P0A796.kcats["PFKNo1"] = 1 / 30
+    # the corresponding stoichiometry value is in -h
+    ec_model.reactions.PFKNo1.metabolites[ec_model.proteins.prot_P0A796] == -1/120
+    ```
+    """
 
     def __init__(self, prot: Protein):
         """Initialize with kcats from the model."""
@@ -317,7 +336,7 @@ class Kcats:
     def _update(self):
         """Build the map on the fly."""
         self._reac_to_kcat = {
-            reac: 1 / reac.metabolites[self._protein]
+            reac: -1 / reac.metabolites[self._protein] / 3600
             for reac in self._protein.reactions
         }
 
@@ -340,7 +359,7 @@ class Kcats:
             reac = self._protein.model.reactions.get_by_id(key)
         else:
             reac = key
-        reac._metabolites[self._protein] = 1 / val
+        reac._metabolites[self._protein] = -1 / (3600 * val)
 
     def _model_warn(self, key: Union[Reaction, str], action: str):
         if not hasattr(self._protein, "model"):
