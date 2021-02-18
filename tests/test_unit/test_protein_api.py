@@ -35,8 +35,9 @@ def test_protein_are_not_model_metabolites(ec_model):
 
 def test_kcats_retrieve_right_coefficients(ec_model):
     """Test kcat interface."""
-    assert (
-        int(ec_model.proteins.get_by_id("prot_P75905").kcats["PUACGAMtrNo1"]) == -251997
+    a_prot = ec_model.proteins.get_by_id("prot_P75905")
+    assert int(a_prot.kcats["PUACGAMtrNo1"]) == int(251997 / 3600)
+    a_prot.kcats["PUACGAMtrNo1"] = 2
+    assert ec_model.reactions.get_by_id("PUACGAMtrNo1").metabolites[a_prot] == -1 / (
+        2 * 3600
     )
-    ec_model.proteins.get_by_id("prot_P75905").kcats["PUACGAMtrNo1"] = -251997
-    assert ec_model.proteins.get_by_id("prot_P75905").kcats["PUACGAMtrNo1"] == -251997

@@ -4,7 +4,7 @@ import hashlib
 import logging
 import re
 from math import isinf, isnan
-from typing import Union
+from typing import Dict, Union
 from warnings import warn
 
 from cobra import Configuration, Metabolite, Object, Reaction
@@ -16,6 +16,7 @@ from cobra.util.solver import (
     set_objective,
 )
 from cobra.util.util import format_long_string
+
 
 LOGGER = logging.getLogger(__name__)
 UNIPROT_PATTERN = re.compile(
@@ -69,6 +70,7 @@ class Protein(Object):
         self.lower_bound = 0
         self._reaction = set()
         self._ub = config.upper_bound
+        self._metabolites = {self: 1}
         if isinstance(id, Metabolite):
             self.from_metabolite(id)
         else:
@@ -111,6 +113,46 @@ class Protein(Object):
             self.reverse_variable.set_bounds(
                 lb=0, ub=None if isinf(self.lower_bound) else -self.lower_bound
             )
+
+    def suscribe_to_pool(self, mmw: float):
+        """Change internal pseudorreaction to have the common pool as reactant."""
+        if not hasattr(self, "_model"):
+            warn(
+                f"Cannot set kcat of Protein {self.id} which does not"
+                f" belong to any model."
+            )
+            return
+        if not hasattr(self._model, "common_protein_pool"):
+            warn(
+                f"Cannot set kcat of Protein {self.id} whose Model does not"
+                f" have a protein pool. Try `model.add_pool()` first."
+            )
+            return
+        self._model.constraints[
+            self._model.common_protein_pool.id
+        ].set_linear_coefficients(
+            {
+                self.forward_variable: -mmw,
+                self.reverse_variable: mmw,
+            }
+        )
+        self._model.common_protein_pool._reaction.add(self)
+        self.metabolites = {self._model.common_protein_pool: -mmw, self: 1}
+
+    def unsuscribe_to_pool(self):
+        """Change internal pseudorreaction to have the common pool as reactant."""
+        if hasattr(self, "_model"):
+            if hasattr(self._model, "common_protein_pool"):
+                self._model.constraints[
+                    self._model.common_protein_pool.id
+                ].set_linear_coefficients(
+                    {
+                        self.forward_variable: 0,
+                        self.reverse_variable: 0,
+                    }
+                )
+                self._model.common_protein_pool._reaction.remove(self)
+                self.metabolites = {self: 1}
 
     @property
     def upper_bound(self):
@@ -269,7 +311,11 @@ class Protein(Object):
     @property
     def metabolites(self):
         """Get metabolite of the protein pseudoreaction as the protein itself."""
-        return {self: 1}
+        return self._metabolites
+
+    @metabolites.setter
+    def metabolites(self, metabolites: Dict):
+        self._metabolites = metabolites
 
     @property
     def reactions(self):

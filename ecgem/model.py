@@ -3,6 +3,7 @@ import logging
 from collections import defaultdict
 from copy import copy, deepcopy
 from functools import partial
+from math import isnan
 from typing import Dict, Iterator, Union
 
 import cobra
@@ -13,6 +14,7 @@ from optlang.symbolics import Zero
 
 from .protein import Protein
 from .reaction import Reaction
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,6 +87,84 @@ class Model(cobra.Model):
         )
         self.__setstate__(self.__dict__)
         self._populate_solver(self.reactions, self.metabolites, self.proteins)
+
+    def get_total_measured_proteins(self) -> float:
+        """Sum of all `Proteins` in the model that has a concentration."""
+        measured = sum(prot.concentration for prot in self.proteins)
+        return 0 if isnan(measured) or not measured else measured
+
+    def constrain_pool(
+        self, p_total, sigma_saturation_factor, fn_mass_fraction_unmeasured_matched
+    ):
+        """Constrain the draw reactions for the unmeasured (common protein pool) proteins.
+
+        Adapted from [geckopy]
+        (https://github.com/SysBioChalmers/GECKO/blob/master/geckopy/geckopy/gecko.py#L184)
+
+        Proteins without their own protein pool are collectively constrained by the
+        common protein pool. Remove protein pools for all proteins that don't have
+        measurements, along with corresponding draw reactions, and add these to
+        the common protein pool and reaction.
+
+        Parameter
+        ---------
+        p_total: float
+            measured total protein fraction in cell in g protein / gDW
+        sigma_saturation_factor: float
+            part of proteome that can be used by metabolism
+        fn_mass_fraction_unmeasured_matched: float
+            TODO: add convenience function to handle this
+            sum of the product of average abundances of unmesured proteins
+            (from, e.g., paxDB) times their molecular weight.
+        """
+        unmeasured_prots = [prot for prot in self.proteins if prot.concentration]
+        if not unmeasured_prots:
+            return
+        self.add_pool()
+        # if there are no proteins measured, the calculations are simplified
+        fs_matched_adjusted = p_total * sigma_saturation_factor
+        if len(unmeasured_prots) != len(self.proteins):
+            p_measured = self.get_total_measured_proteins()
+            # * section 2.5.1
+            # 1. and 2. introduce `prot_pool` and exchange reaction done in __init__
+            # 3. limiting total usage with the unmeasured amount of protein
+            f_mass_fraction_measured_matched_to_total = (
+                fn_mass_fraction_unmeasured_matched / (1 - p_measured / p_total)
+            )
+            fs_matched_adjusted = (
+                (p_total - p_measured)
+                * f_mass_fraction_measured_matched_to_total
+                * sigma_saturation_factor
+            )
+        self.protein_pool_exchange.bounds = 0, fs_matched_adjusted
+
+        m_weigths = [prot.mw for prot in self.proteins if prot.mw]
+        average_mmw = sum(m_weigths) / len(m_weigths) / 1000.0
+        for protein in unmeasured_prots:
+            mmw = protein.mw / 1000 if protein.mw else average_mmw
+            protein.suscribe_to_pool(mmw)
+
+    def add_pool(self, reac_id: str = "prot_pool_exchange", met_id: str = "prot_pool"):
+        """Add the reaction and metabolite to constraint the common pool of proteins.
+
+        Parameters
+        ----------
+        read_id: str
+            id of the common protein pool pseudorreaction to add.
+        met_id: str
+            id of the common protein pool metabolite to add.
+
+        """
+        try:
+            self.common_protein_pool = self.metabolites.get_by_id(met_id)
+        except KeyError:
+            self.common_protein_pool = Metabolite(met_id)
+        try:
+            self.protein_pool_exchange = self.reactions.get_by_id(reac_id)
+        except KeyError:
+            self.protein_pool_exchange = Reaction(reac_id)
+            self.protein_pool_exchange.add_metabolites({self.common_protein_pool: 1.0})
+            self.add_reactions([self.protein_pool_exchange])
 
     def copy(self):
         """Provide a partial 'deepcopy' of the Model.

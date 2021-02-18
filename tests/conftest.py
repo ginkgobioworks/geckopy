@@ -7,6 +7,7 @@ import pytest
 
 import ecgem
 
+
 config = cobra.Configuration()
 config.solver = "glpk"
 

@@ -37,6 +37,7 @@ from ecgem.model import Model
 from ecgem.protein import Protein
 from ecgem.reaction import Reaction
 
+
 LOGGER = logging.getLogger(__name__)
 config = Configuration()
 
