@@ -19,6 +19,7 @@ cache:
     - venv/
 
 before_script:
+  - apk add g++
   - python -V  # Print out python version for debugging
   - pip install virtualenv
   - virtualenv venv
@@ -36,14 +37,3 @@ style:
   - flake8 ecgem tests
   - black --check diff ecgem tests
   - isort --check-only --diff ecgem tests
-
-pages:
-  script:
-    - pip install sphinx sphinx-rtd-theme
-    - cd doc ; make html
-    - mv build/html/ ../public/
-  artifacts:
-    paths:
-      - public
-  only:
-    - master
