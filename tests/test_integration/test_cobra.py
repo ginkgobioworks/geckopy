@@ -1,8 +1,8 @@
-"""Ensure that ecgem is consistent with cobrapy."""
+"""Ensure that geckopy is consistent with cobrapy."""
 
 import pandas as pd
 
-import ecgem
+import geckopy
 
 
 def test_unconstrained_ec_model_is_cobra_model(ec_model, cobra_model):
@@ -13,7 +13,7 @@ def test_unconstrained_ec_model_is_cobra_model(ec_model, cobra_model):
 def test_constrained_ec_model_is_not_cobra_model(cobra_model, experimental_copy_number):
     """Check that constrained ec_model returns different maximum than the plain model."""
     raw_proteomics = pd.read_csv(experimental_copy_number)
-    ec_model = ecgem.experimental.from_copy_number(
+    ec_model = geckopy.experimental.from_copy_number(
         cobra_model.copy(),
         index=raw_proteomics["uniprot"],
         cell_copies=raw_proteomics["copies_per_cell"],
@@ -27,5 +27,5 @@ def test_constrained_ec_model_is_not_cobra_model(cobra_model, experimental_copy_
 
 def test_from_cobrapy_works(cobra_model):
     """Generate ec_gem from cobrapy_model."""
-    ec_model = ecgem.Model(cobra_model)
+    ec_model = geckopy.Model(cobra_model)
     assert len(ec_model.proteins) == 1259

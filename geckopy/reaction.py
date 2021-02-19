@@ -6,7 +6,7 @@ from .protein import Protein
 
 
 class Reaction(cobra.Reaction):
-    """ecgem.Reaction has an additional attribute `.proteins`."""
+    """geckopy.Reaction has an additional attribute `.proteins`."""
 
     @property
     def proteins(self):

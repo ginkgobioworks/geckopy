@@ -1,14 +1,14 @@
 """Test Input/Output capabilities."""
-import ecgem
+import geckopy
 
 
-def test_read_ecgem_from_file(path_eciML1515):
+def test_read_geckopy_from_file(path_eciML1515):
     """Read model directly from file."""
-    model = ecgem.io.read_sbml_ec_model(path_eciML1515)
+    model = geckopy.io.read_sbml_ec_model(path_eciML1515)
     assert len(model.proteins) == 1259
 
 
-def test_copy_ecgem(ec_model):
+def test_copy_geckopy(ec_model):
     """Check that deepcopy works."""
     copied = ec_model.copy()
     assert len(copied.proteins) == len(ec_model.proteins)

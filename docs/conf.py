@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'ecgem'
+project = 'geckopy'
 # copyright = '
 # author = ''
 

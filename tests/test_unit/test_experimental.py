@@ -4,7 +4,7 @@ from math import isnan
 
 import pandas as pd
 
-from ecgem.experimental import from_copy_number, from_mmol_gDW
+from geckopy.experimental import from_copy_number, from_mmol_gDW
 
 
 def test_ec_model_from_copy_number_can_grow(ec_model, experimental_copy_number):

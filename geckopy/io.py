@@ -1,4 +1,4 @@
-"""Read and write SBML directly with `ecgem.Model`s.
+"""Read and write SBML directly with `geckopy.Model`s.
 
 Proteins are Species, members of Group Protein, with:
     - initialAmount: Concentration.
@@ -33,9 +33,9 @@ from cobra.io.sbml import (
 )
 from cobra.util.solver import set_objective
 
-from ecgem.model import Model
-from ecgem.protein import Protein
-from ecgem.reaction import Reaction
+from geckopy.model import Model
+from geckopy.protein import Protein
+from geckopy.reaction import Reaction
 
 
 LOGGER = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ def read_sbml_ec_model(
     hardcoded_rev_reactions: bool = True,
     **kwargs,
 ) -> Model:
-    """Create `ecgem.Model` from SBMLDocument.
+    """Create `geckopy.Model` from SBMLDocument.
 
     Parameters
     ----------
@@ -125,8 +125,8 @@ def read_sbml_ec_model(
     model_id = model.getIdAttribute()
     if not libsbml.SyntaxChecker.isValidSBMLSId(model_id):
         LOGGER.error("'%s' is not a valid SBML 'SId'." % model_id)
-    ecgem_model = Model(model_id, hardcoded_rev_reactions=hardcoded_rev_reactions)
-    ecgem_model.name = model.getName()
+    geckopy_model = Model(model_id, hardcoded_rev_reactions=hardcoded_rev_reactions)
+    geckopy_model.name = model.getName()
 
     # meta information
     meta = {
@@ -176,11 +176,11 @@ def read_sbml_ec_model(
             )
     meta["info"] = info
     meta["packages"] = packages
-    ecgem_model._sbml = meta
+    geckopy_model._sbml = meta
 
     # notes and annotations
-    ecgem_model.notes = _parse_notes_dict(model)
-    ecgem_model.annotation = _parse_annotations(model)
+    geckopy_model.notes = _parse_notes_dict(model)
+    geckopy_model.annotation = _parse_annotations(model)
 
     # Compartments
     # FIXME: update with new compartments
@@ -190,7 +190,7 @@ def read_sbml_ec_model(
     ) in model.getListOfCompartments():  # noqa: E501 type: libsbml.Compartment
         cid = _check_required(compartment, compartment.getIdAttribute(), "id")
         compartments[cid] = compartment.getName()
-    ecgem_model.compartments = compartments
+    geckopy_model.compartments = compartments
 
     # Species
     metabolites = []
@@ -259,8 +259,8 @@ def read_sbml_ec_model(
         else:
             proteins.append(Protein(met, concentration=initial_amount))
 
-    ecgem_model.add_metabolites(metabolites)
-    ecgem_model.add_proteins(proteins)
+    geckopy_model.add_metabolites(metabolites)
+    geckopy_model.add_proteins(proteins)
 
     # Add exchange reactions for boundary metabolites
     ex_reactions = []
@@ -278,7 +278,7 @@ def read_sbml_ec_model(
         # species is reactant
         ex_reaction.add_metabolites({met: -1})
         ex_reactions.append(ex_reaction)
-    ecgem_model.add_reactions(ex_reactions)
+    geckopy_model.add_reactions(ex_reactions)
 
     # Genes
     if model_fbc:
@@ -295,7 +295,7 @@ def read_sbml_ec_model(
             cobra_gene.annotation = _parse_annotations(gp)
             cobra_gene.notes = _parse_notes_dict(gp)
 
-            ecgem_model.genes.append(cobra_gene)
+            geckopy_model.genes.append(cobra_gene)
     else:
         for (
             cobra_reaction
@@ -324,10 +324,10 @@ def read_sbml_ec_model(
                     if f_replace and F_GENE in f_replace:
                         gid = f_replace[F_GENE](gid)
 
-                    if gid not in ecgem_model.genes:
+                    if gid not in geckopy_model.genes:
                         cobra_gene = Gene(gid)
                         cobra_gene.name = gid
-                        ecgem_model.genes.append(cobra_gene)
+                        geckopy_model.genes.append(cobra_gene)
 
     # GPR rules
     def process_association(ass):
@@ -478,9 +478,9 @@ def read_sbml_ec_model(
         object_stoichiometry = {}
         for met_id in stoichiometry:
             target_set = (
-                ecgem_model.proteins
-                if met_id in ecgem_model.proteins
-                else ecgem_model.metabolites
+                geckopy_model.proteins
+                if met_id in geckopy_model.proteins
+                else geckopy_model.metabolites
             )
             metabolite = target_set.get_by_id(met_id)
             object_stoichiometry[metabolite] = stoichiometry[met_id]
@@ -530,7 +530,7 @@ def read_sbml_ec_model(
 
         cobra_reaction.gene_reaction_rule = gpr
 
-    ecgem_model.add_reactions(reactions)
+    geckopy_model.add_reactions(reactions)
 
     # Objective
     obj_direction = "max"
@@ -559,7 +559,7 @@ def read_sbml_ec_model(
                 if f_replace and F_REACTION in f_replace:
                     rid = f_replace[F_REACTION](rid)
                 try:
-                    objective_reaction = ecgem_model.reactions.get_by_id(rid)
+                    objective_reaction = geckopy_model.reactions.get_by_id(rid)
                 except KeyError:
                     raise CobraSBMLError("Objective reaction '%s' " "not found" % rid)
                 try:
@@ -579,7 +579,7 @@ def read_sbml_ec_model(
                     if f_replace and F_REACTION in f_replace:
                         rid = f_replace[F_REACTION](rid)
                     try:
-                        objective_reaction = ecgem_model.reactions.get_by_id(rid)
+                        objective_reaction = geckopy_model.reactions.get_by_id(rid)
                     except KeyError:
                         raise CobraSBMLError(
                             "Objective reaction '%s' " "not found", rid
@@ -601,8 +601,8 @@ def read_sbml_ec_model(
         LOGGER.error(
             "No objective coefficients in model. Unclear what should " "be optimized"
         )
-    set_objective(ecgem_model, coefficients)
-    ecgem_model.solver.objective.direction = obj_direction
+    set_objective(geckopy_model, coefficients)
+    geckopy_model.solver.objective.direction = obj_direction
 
     # parse groups
     model_groups = model.getPlugin("groups")  # type: libsbml.GroupsModelPlugin
@@ -652,17 +652,17 @@ def read_sbml_ec_model(
                     if f_replace and F_SPECIE in f_replace:
                         obj_id = f_replace[F_SPECIE](obj_id)
                     try:
-                        cobra_member = ecgem_model.metabolites.get_by_id(obj_id)
+                        cobra_member = geckopy_model.metabolites.get_by_id(obj_id)
                     except KeyError:
-                        cobra_member = ecgem_model.proteins.get_by_id(obj_id)
+                        cobra_member = geckopy_model.proteins.get_by_id(obj_id)
                 elif typecode == libsbml.SBML_REACTION:
                     if f_replace and F_REACTION in f_replace:
                         obj_id = f_replace[F_REACTION](obj_id)
-                    cobra_member = ecgem_model.reactions.get_by_id(obj_id)
+                    cobra_member = geckopy_model.reactions.get_by_id(obj_id)
                 elif typecode == libsbml.SBML_FBC_GENEPRODUCT:
                     if f_replace and F_GENE in f_replace:
                         obj_id = f_replace[F_GENE](obj_id)
-                    cobra_member = ecgem_model.genes.get_by_id(obj_id)
+                    cobra_member = geckopy_model.genes.get_by_id(obj_id)
                 else:
                     LOGGER.warning(
                         "Member %s could not be added to group %s."
@@ -678,7 +678,7 @@ def read_sbml_ec_model(
     else:
         # parse deprecated subsystems on reactions
         groups_dict = {}
-        for cobra_reaction in ecgem_model.reactions:
+        for cobra_reaction in geckopy_model.reactions:
             if "SUBSYSTEM" in cobra_reaction.notes:
                 g_name = cobra_reaction.notes["SUBSYSTEM"]
                 if g_name in groups_dict:
@@ -693,16 +693,16 @@ def read_sbml_ec_model(
             cobra_group.add_members(cobra_members)
             groups.append(cobra_group)
 
-    ecgem_model.add_groups(groups)
+    geckopy_model.add_groups(groups)
 
     # now add everything under group Proteins to model.proteins if it was not
     # already added based on naming conventions
-    if ecgem_model.groups.query("Protein"):
-        g_proteins = ecgem_model.groups.Protein.members.copy()
-        g_proteins = [prot for prot in g_proteins if prot not in ecgem_model.proteins]
+    if geckopy_model.groups.query("Protein"):
+        g_proteins = geckopy_model.groups.Protein.members.copy()
+        g_proteins = [prot for prot in g_proteins if prot not in geckopy_model.proteins]
         if g_proteins:
-            ecgem_model.remove_metabolites(g_proteins)
-            ecgem_model.add_proteins([Protein(prot) for prot in g_proteins])
+            geckopy_model.remove_metabolites(g_proteins)
+            geckopy_model.add_proteins([Protein(prot) for prot in g_proteins])
 
     # general hint for missing flux bounds
     if missing_bounds:
@@ -712,4 +712,4 @@ def read_sbml_ec_model(
             "should be set explicitly on all reactions."
         )
 
-    return ecgem_model
+    return geckopy_model

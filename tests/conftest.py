@@ -5,7 +5,7 @@ from os.path import dirname, join
 import cobra
 import pytest
 
-import ecgem
+import geckopy
 
 
 config = cobra.Configuration()
@@ -21,7 +21,7 @@ def path_eciML1515():
 @pytest.fixture(scope="function")
 def ec_model(path_eciML1515):
     """Load from cobrapy."""
-    return ecgem.io.read_sbml_ec_model(path_eciML1515)
+    return geckopy.io.read_sbml_ec_model(path_eciML1515)
 
 
 @pytest.fixture(scope="function")
@@ -33,7 +33,7 @@ def cobra_model(path_eciML1515):
 @pytest.fixture(scope="session")
 def dummy_ec_model():
     """Load from cobrapy."""
-    return ecgem.io.read_sbml_ec_model(
+    return geckopy.io.read_sbml_ec_model(
         join(dirname(__file__), "data", "all_prot_encodings.xml")
     )
 

@@ -490,7 +490,7 @@ class Model(cobra.Model):
     ):
         """Add a boundary reaction for a given metabolite.
 
-        Enzyme constraint changes: return an ecgem.Reaction.
+        Enzyme constraint changes: return an geckopy.Reaction.
         """
         rxn = super().__init__(metabolite, type, reaction_id, lb, ub, sbo_term)
         return Reaction(rxn)

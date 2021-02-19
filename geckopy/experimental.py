@@ -14,7 +14,7 @@ def limit_proteins(model: cobra.Model, measurements: pd.DataFrame):
 
     Parameters
     ----------
-    model: cobra.Model (or ecgem.Model)
+    model: cobra.Model (or geckopy.Model)
         The enzyme-constrained model.
     measurements : pd.DataFrame
         Protein abundances in mmol / gDW.
