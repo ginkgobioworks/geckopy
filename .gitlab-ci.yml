@@ -34,5 +34,5 @@ style:
   script:
   - pip install flake8 flake8-docstrings flake8-bugbear black isort
   - flake8 geckopy tests
-  - black --check diff geckopy tests
+  - black --check --diff geckopy tests
   - isort --check-only --diff geckopy tests
