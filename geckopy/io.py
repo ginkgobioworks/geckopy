@@ -52,7 +52,8 @@ PROT_EX_PATTERN = re.compile(
 def read_sbml_ec_model(
     filename: str,
     number: float = float,
-    f_replace: re.Pattern = F_REPLACE,
+    # re.Pattern does not exist in py36 so this type hint cannot be added now
+    f_replace=F_REPLACE,
     set_missing_bounds: bool = False,
     hardcoded_rev_reactions: bool = True,
     **kwargs,
