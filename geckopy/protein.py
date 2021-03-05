@@ -70,6 +70,7 @@ class Protein(Object):
         self.lower_bound = 0
         self._reaction = set()
         self._ub = config.upper_bound
+        self.compartment = "c"
         self._metabolites = {self: 1}
         if isinstance(id, Metabolite):
             self.from_metabolite(id)
@@ -84,6 +85,7 @@ class Protein(Object):
         if not UNIPROT_PATTERN.match(met.id):
             LOGGER.warning(f"Metabolite {met.id} does not use Uniprot ID.")
         self.id = met.id
+        self.compartment = met.compartment
         self.name = met.name
         self._reaction = met._reaction
         self.charge = met.charge
