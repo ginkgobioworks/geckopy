@@ -33,7 +33,7 @@ def limit_proteins(model: cobra.Model, measurements: pd.DataFrame):
         else:
             # update only upper_bound (as enzymes can be unsaturated):
             if is_ec_model:
-                rxn.add_concentration(measure)
+                rxn.concentration = measure
             else:
                 rxn.upper_bound = measure
 

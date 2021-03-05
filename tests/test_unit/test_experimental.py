@@ -20,7 +20,6 @@ def test_ec_model_from_copy_number_can_grow(ec_model, experimental_copy_number):
         water=0.3,
     )
     sol = ec_model.slim_optimize()
-    print(sol)
     assert sol < 0.1 if not isnan(sol) else True
 
 

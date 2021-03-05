@@ -16,3 +16,7 @@ class Reaction(cobra.Reaction):
             for met, stoich in self._metabolites.copy().items()
             if isinstance(met, Protein)
         }
+
+    def add_protein(self):
+        """Add a protein to the reaction."""
+        pass

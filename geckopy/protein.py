@@ -157,6 +157,23 @@ class Protein(Object):
                 self.metabolites = {self: 1}
 
     @property
+    def concentration(self):
+        r"""Get upper bounds as [E] (conventionally in $\frac{mmol}{gDW}$).
+
+        [E] multiplied by the kcat (expressed in the reaction stoichiometry as
+        1/kcat) yields $\frac{mmol}/{gDW h}$.
+
+        Taken from [Benjamín J Sánchez et al., 2016]
+        (https://www.embopress.org/doi/full/10.15252/msb.20167411).
+        """
+        return self._concentration
+
+    @concentration.setter
+    @resettable
+    def concentration(self, value):
+        self.add_concentration(value)
+
+    @property
     def upper_bound(self):
         r"""Get upper bounds as [E] (conventionally in $\frac{mmol}{gDW}$).
 
@@ -185,7 +202,7 @@ class Protein(Object):
 
         It will unsuscribe the protein to the common protein pool, if suscribed.
         """
-        self.concentration = value
+        self._concentration = value
         self.unsuscribe_to_pool()
         self.update_variable_bounds()
 
@@ -327,7 +344,7 @@ class Protein(Object):
     @property
     def model(self):
         """Retrieve the model the reaction is a part of."""
-        return self._model
+        return self._model if hasattr(self, "_model") else None
 
     def __str__(self):
         """Print str representation as id."""
