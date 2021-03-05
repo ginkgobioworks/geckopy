@@ -214,6 +214,11 @@ class Protein(Object):
         )
 
     @property
+    def contribution(self):
+        """Get primal value (analogous to flux) in the most recent solution."""
+        return self.flux
+
+    @property
     def flux(self):
         """Get flux value in the most recent solution.
 

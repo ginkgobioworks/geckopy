@@ -477,6 +477,7 @@ class Model(cobra.Model):
         solution_prot = cobra.core.get_solution(
             self, reactions=self.proteins, metabolites=self.proteins
         )
+        solution_prot.contributions = solution_prot.flux
         return solution, solution_prot
 
     def add_boundary(
