@@ -13,7 +13,7 @@ def test_constraint_pool_changes_objective_value(slim_solution, ec_model):
     ec_model.constrain_pool(2e-3, 0.8, 1.0)
     pool_solution = ec_model.slim_optimize()
     assert approx(slim_solution) != approx(pool_solution)
-    assert approx(pool_solution) != 0. and not isnan(pool_solution)
+    assert approx(pool_solution) != 0.0 and not isnan(pool_solution)
 
 
 def test_added_protein_modifies_solution(ec_model, slim_solution):
