@@ -39,6 +39,12 @@ def dummy_ec_model():
 
 
 @pytest.fixture(scope="session")
+def slim_solution(path_eciML1515):
+    """Provide the objective value of the enzyme constrained model."""
+    return geckopy.io.read_sbml_ec_model(path_eciML1515).slim_optimize()
+
+
+@pytest.fixture(scope="session")
 def experimental_copy_number():
     """Load exp data.
 

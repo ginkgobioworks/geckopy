@@ -5,9 +5,9 @@ import pandas as pd
 import geckopy
 
 
-def test_unconstrained_ec_model_is_cobra_model(ec_model, cobra_model):
+def test_unconstrained_ec_model_is_cobra_model(slim_solution, cobra_model):
     """Check that unconstrained ec_model returns the same maximum as the plain model."""
-    assert round(cobra_model.slim_optimize(), 4) == round(ec_model.slim_optimize(), 4)
+    assert round(cobra_model.slim_optimize(), 4) == round(slim_solution, 4)
 
 
 def test_constrained_ec_model_is_not_cobra_model(cobra_model, experimental_copy_number):
