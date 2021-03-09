@@ -60,3 +60,15 @@ def experimental_mmol_gDW():
     TODO: add ref.
     """
     return join(dirname(__file__), "data", "mmol_gdW_protemics.csv")
+
+
+@pytest.fixture(scope="function")
+def thermodb():
+    """Path to thermodynamics database from pytfa."""
+    return join(dirname(__file__), "data", "thermo_data.thermodb")
+
+
+@pytest.fixture(scope="function")
+def mnx():
+    """Path to xref reduced xref file."""
+    return join(dirname(__file__), "data", "chem_xref_seedset.tsv")

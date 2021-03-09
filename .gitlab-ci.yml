@@ -27,7 +27,7 @@ before_script:
 test:
   script:
     - pip install .
-    - pip install pytest
+    - pip install pytest pytfa
     - python -m pytest
 
 style:
