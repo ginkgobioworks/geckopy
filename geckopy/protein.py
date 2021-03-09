@@ -46,12 +46,13 @@ class Protein(Object):
         1 / stoichimetry coefficients of its reactions.
     mw: float
         TODO: parsed from initalParameters/calculate from formula
-    flux: float
+    contribution: float
         value of flux of variable, only accessible after optimizing the model.
     lower_bound: float
         should be 0
     upper_bound: float
-        concentration * kcat, it cannot be set directly
+        concentration * kcat if there is a concentration, mmw if is part of the
+        pool constraint (unmeasured proteins) or 1000.
     formula: str
     charge: float
     """
