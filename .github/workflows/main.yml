@@ -43,7 +43,7 @@ jobs:
 #        fail_ci_if_error: true
 
   style:
-    - if: matrix.python-version == 3.9
+    - if: matrix.python-version == '3.9'
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
