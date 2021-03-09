@@ -3,12 +3,11 @@ import os
 
 import pytest
 import pytfa
-
 from pytfa.io import load_thermoDB
 
 from geckopy.integration.pytfa import (
-    prepare_gecko_to_thermo,
     add_dummy_protein_info,
+    prepare_gecko_to_thermo,
     write_thermodb,
 )
 
