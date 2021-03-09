@@ -13,6 +13,12 @@ from geckopy.integration.pytfa import (
 )
 
 
+# these tests are unbearably slow without CPLEX
+_cplex = pytest.importorskip(
+    "cplex", reason="Avoid pytfa tests if CPLEX is not installed"
+)
+
+
 def test_integrated_model_works(ec_model, thermodb, mnx):
     """Test building block."""
     thermo_loaded = load_thermoDB(thermodb)
