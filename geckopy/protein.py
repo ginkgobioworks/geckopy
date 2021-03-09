@@ -73,6 +73,7 @@ class Protein(Object):
         self._ub = config.upper_bound
         self.compartment = "c"
         self._metabolites = {self: 1}
+        self._annotation = {}
         if isinstance(id, Metabolite):
             self.from_metabolite(id)
         else:
@@ -91,6 +92,7 @@ class Protein(Object):
         self._reaction = met._reaction
         self.charge = met.charge
         self.formula = met.formula
+        self._annotation = met._annotation
 
     def update_variable_bounds(self):
         """Sync object bounds with inner model variable bounds."""
