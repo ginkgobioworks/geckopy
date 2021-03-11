@@ -1,6 +1,8 @@
 # geckopy 
-__G__enome-scale model __E__nzyme __C__onstraints, using __K__inetics and 
-__O__mics in __py__thon.
+[![CI-CD](https://github.com/ginkgobioworks/geckopy/actions/workflows/main.yml/badge.svg)](https://github.com/ginkgobioworks/geckopy/actions/workflows/main.yml)
+
+**G**enome-scale model **E**nzyme **C**onstraints, using **K**inetics and 
+**O**mics in **py**thon.
 
 By combining kcats and proteomics measurement, geckopy allows for improving
 the modeling capabilities in genome-scale models.

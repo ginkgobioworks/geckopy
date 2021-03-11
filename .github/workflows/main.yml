@@ -8,10 +8,20 @@ on:
     tags:
     - '[0-9]+.[0-9]+.[0-9]+'
     - '[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+    paths-ignore:
+    - "COPYRIGHT"
+    - "LICENSE-*"
+    - "**.md"
+    - "**.txt"
   pull_request:
     branches:
     - master
     - devel
+    paths-ignore:
+    - "COPYRIGHT"
+    - "LICENSE-*"
+    - "**.md"
+    - "**.txt"
 
 jobs:
   test:
