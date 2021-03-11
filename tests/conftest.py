@@ -14,7 +14,7 @@ config = cobra.Configuration()
 @pytest.fixture(scope="session")
 def path_eciML1515():
     """Store path to model."""
-    return join(dirname(__file__), "data", "eciML1515_tweaked.xml")
+    return join(dirname(__file__), "data", "eciML1515.xml.gz")
 
 
 @pytest.fixture(scope="function")
