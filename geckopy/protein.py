@@ -91,7 +91,7 @@ class Protein(Object):
         self.name = met.name
         self._reaction = met._reaction
         self.charge = met.charge
-        self.formula = met.formula
+        self.formula = ""
         self._annotation = met._annotation
 
     def update_variable_bounds(self):

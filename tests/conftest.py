@@ -9,13 +9,12 @@ import geckopy
 
 
 config = cobra.Configuration()
-config.solver = "glpk"
 
 
 @pytest.fixture(scope="session")
 def path_eciML1515():
     """Store path to model."""
-    return join(dirname(__file__), "data", "eciML1515.xml.gz")
+    return join(dirname(__file__), "data", "eciML1515_tweaked.xml")
 
 
 @pytest.fixture(scope="function")
@@ -72,3 +71,9 @@ def thermodb():
 def mnx():
     """Path to xref reduced xref file."""
     return join(dirname(__file__), "data", "chem_xref_seedset.tsv")
+
+
+@pytest.fixture(scope="session")
+def compartment_data():
+    """Path to compartment data from pytfa."""
+    return join(dirname(__file__), "data", "compartment_data.json")

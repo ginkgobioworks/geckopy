@@ -5,26 +5,25 @@ from typing import Dict
 
 import cobra
 import pandas as pd
+import pytfa
 
 import geckopy
 
 
-def prepare_gecko_to_thermo(
-    model: geckopy.Model,
-    thermodb: Dict,
-    mnx_file: str,
-):
-    """Prepare the annotation of metabolites and proteins of `model` to pytfa.
+def adapt_gecko_to_thermo(
+    ec_model: geckopy.Model, thermodb: dict, compartment_data: dict, *args, **kwargs
+) -> pytfa.ThermoModel:
+    """Prepare and convert gecko model to `pytfa.ThermoModel`.
 
     It modifies the `model` and the `thermodb` in place.
 
     The 'seed_id' annotation is hardcoded in pytfa so the metabolites and the
-    database must have that annotation to be used. 'metanetx.chemical' annotation
-    are translated to seed if possible.
+    database must have that annotation to be used.
 
-    If proteins were added without dG energy, they assumed to be missing metabolites
-    so the reactions with enzymes would be ignored. Adding 0 formation energy
-    results in ignoring proteins for dG, since catalyzers do not affect dG.
+    If proteins were added without dG energy, they would be treated as missing
+    metabolites so the reactions with enzymes would be ignored. Adding 0
+    formation energy results in ignoring proteins for dG, since catalyzers do
+    not affect dG.
 
     Parameters
     ----------
@@ -32,12 +31,47 @@ def prepare_gecko_to_thermo(
     thermodb: dict
         from pytfa.io.load_thermo. The format is explained at
         https://pytfa.readthedocs.io/en/latest/thermoDB.html
-    mnx_file: str
-        path to "chem_xref.tsv" file. It can be downloaded from
-        https://www.metanetx.org/cgi-bin/mnxget/mnxref/chem_xref.tsv
+    compartment_data: dict
+        check https://pytfa.readthedocs.io/en/latest/model.html#compartment-data
+    *args, **kwargs:
+        which will be passed to the pytfa.ThermoModel.__init__
     """
-    translate_model_mnx_to_seed(model, thermodb, mnx_file)
-    add_dummy_protein_info(model, thermodb)
+    tmodel = pytfa.ThermoModel(thermodb, ec_model, *args, **kwargs)
+    tmodel.compartments = compartment_data
+    thermodb["metabolites"]["protein"] = {
+        "pKa": [7],
+        "deltaGf_err": 0,
+        "mass_std": 333.0,
+        "struct_cures": {},
+        "id": "protein",
+        "nH_std": 12,
+        "name": "protein",
+        "formula": "",
+        "deltaGf_std": 0,
+        "error": "Nil",
+        "charge_std": 0,
+        "struct_cues": {},
+    }
+    prot_data = thermodb["metabolites"]["protein"]
+    for prot in tmodel.proteins:
+        CompartmentpH = tmodel.compartments[prot.compartment]["pH"]
+        CompartmentionicStr = tmodel.compartments[prot.compartment]["ionicStr"]
+        prot.thermo = pytfa.thermo.MetaboliteThermo(
+            prot_data,
+            CompartmentpH,
+            CompartmentionicStr,
+            tmodel.TEMPERATURE,
+            tmodel.MIN_pH,
+            tmodel.MAX_pH,
+            tmodel.Debye_Huckel_B,
+            tmodel.thermo_unit,
+        )
+    tmodel.prepare()
+    for prot in tmodel.proteins:
+        # metabolites with this formula are ignored
+        prot.formula = "H"
+    tmodel.convert(verbose=False)
+    return tmodel
 
 
 def translate_model_mnx_to_seed(
@@ -74,25 +108,6 @@ def translate_model_mnx_to_seed(
             if annotation:
                 # just pick the first one
                 met.annotation["seed_id"] = annotation[0]
-
-
-def add_dummy_protein_info(model: geckopy.Model, thermodb: Dict):
-    """Add 0 formation energy for proteins."""
-    for prot in model.proteins:
-        prot.annotation["seed_id"] = "protein"
-    thermodb["metabolites"]["protein"] = {
-        "pKa": [7],
-        "deltaGf_err": 0,
-        "mass_std": 333.0,
-        "struct_cures": {},
-        "id": "protein",
-        "nH_std": 12,
-        "name": "protein",
-        "formula": "",
-        "deltaGf_std": 0,
-        "error": "Nil",
-        "charge_std": 0,
-    }
 
 
 def write_thermodb(thermodb: Dict, filename: str):
