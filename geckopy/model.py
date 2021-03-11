@@ -7,6 +7,7 @@ from math import isnan
 from typing import Dict, Iterator, Union
 
 import cobra
+import pandas as pd
 from cobra import Metabolite
 from cobra.core.dictlist import DictList
 from cobra.util.context import get_context
@@ -478,6 +479,17 @@ class Model(cobra.Model):
             self, reactions=self.proteins, metabolites=self.proteins
         )
         solution_prot.contributions = solution_prot.fluxes
+        # workaround for wrong shadow prices of proteins
+        try:
+            prot_index = [prot.id for prot in self.proteins]
+            solution_prot.shadow_prices = pd.Series(
+                index=prot_index,
+                data=[self.constraints[prot.id].dual for prot in prot_index],
+                name="shadow_prices",
+            )
+        except Exception:
+            pass
+
         return solution, solution_prot
 
     def add_boundary(
