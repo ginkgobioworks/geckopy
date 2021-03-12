@@ -54,11 +54,13 @@ class Reaction(cobra.Reaction):
         if model is not None:
             model.add_proteins([prot])
 
+            # the protein is added to both sides of the reaction in case the
+            # latter is reversible (it has to be consumed in both cases)
             for metabolite, coefficient in self._metabolites.items():
                 model.constraints[metabolite.id].set_linear_coefficients(
                     {
                         self.forward_variable: coefficient,
-                        self.reverse_variable: -coefficient,
+                        self.reverse_variable: coefficient,
                     }
                 )
         # context = get_context(self)
