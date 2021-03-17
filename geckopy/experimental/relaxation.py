@@ -35,17 +35,6 @@ def apply_proteomics_relaxation(original_model: Model, min_objective=0.0):
 
     """
     model = original_model.copy()
-    # if min_objective:
-    #     try:
-    #         model.reactions.get_by_id(
-    #             list(model.objective.variables)[0].name
-    #         ).lower_bound = min_objective
-    #     except KeyError:
-    #         # guard against using the reverse variable
-    #         model.reactions.get_by_id(
-    #             list(model.objective.variables)[1].name
-    #         ).lower_bound = min_objective
-    # first relaxation to identify protein concentrations that must be relaxed
     _, elastics = apply_upper_relaxation(
         model,
         [
@@ -80,16 +69,6 @@ def apply_proteomics_elastic_relaxation(original_model: Model, min_objective=0.0
         copy of the model with the relaxed variables applied and the sets
     """
     model = original_model.copy()
-    # if min_objective:
-    #     try:
-    #         model.reactions.get_by_id(
-    #             list(model.objective.variables)[0].name
-    #         ).lower_bound = min_objective
-    #     except KeyError:
-    #         # guard against using the reverse variable
-    #         model.reactions.get_by_id(
-    #             list(model.objective.variables)[1].name
-    #         ).lower_bound = min_objective
     elastics = elastic_upper_relaxation(
         model,
         [
