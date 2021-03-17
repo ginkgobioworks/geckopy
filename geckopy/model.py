@@ -338,11 +338,17 @@ class Model(cobra.Model):
                 constraint_terms[constraint][forward_variable] = coeff
                 # if a reaction is reversible, the protein is used on both
                 # directions
+                rev = (
+                    reaction.reversibility
+                    # it could be a protein
+                    if hasattr(reaction, "reversibility")
+                    else False
+                )
                 constraint_terms[constraint][reverse_variable] = (
                     coeff
                     if not self.hardcoded_rev_reactions
                     and metabolite in self.proteins
-                    and reaction.reversibility
+                    and rev
                     else -coeff
                 )
 

@@ -3,7 +3,7 @@
 import cobra
 import pandas as pd
 
-from .model import Model
+from geckopy.model import Model
 
 
 def limit_proteins(model: cobra.Model, measurements: pd.DataFrame):
