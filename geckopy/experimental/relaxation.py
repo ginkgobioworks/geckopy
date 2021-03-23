@@ -6,16 +6,19 @@ to allow growth.
 """
 
 from math import isnan
-from typing import List
+from typing import Dict, List, Set, Tuple
 
 import cobra
 import optlang
+import pandas as pd
 import sympy
 
 from geckopy.model import Model
 
 
-def apply_proteomics_relaxation(original_model: Model, min_objective=0.0):
+def apply_proteomics_relaxation(
+    original_model: Model, min_objective=0.0
+) -> Tuple[Model, Set]:
     """Relax the problem by relaxing the protein concentration constraints.
 
     The relaxed problems will contain elastic variables, returning the model a
@@ -48,7 +51,9 @@ def apply_proteomics_relaxation(original_model: Model, min_objective=0.0):
     return apply_upper_relaxation(model, elastics)
 
 
-def apply_proteomics_elastic_relaxation(original_model: Model, min_objective=0.0):
+def apply_proteomics_elastic_relaxation(
+    original_model: Model, min_objective=0.0
+) -> Tuple[Model, Set]:
     """Relax the problem by relaxing the protein concentration constraints.
 
     The relaxed problems will be determined via Elastic filtering, returning
@@ -99,7 +104,7 @@ def change_constraint(
 
 def elastic_upper_relaxation(
     original_model: cobra.Model, elastic_candidates: List[str]
-):
+) -> Set:
     r"""Convert constrains to elastic constraints until the problem is feashible.
 
     It assumes that the elastic candidates are all subject to a <= constraint.
@@ -157,7 +162,9 @@ def elastic_upper_relaxation(
     return iss
 
 
-def apply_upper_relaxation(original_model: cobra.Model, to_relax: List[str]):
+def apply_upper_relaxation(
+    original_model: cobra.Model, to_relax: List[str]
+) -> Tuple[Model, Set]:
     """Relax the problem by relaxing `to_relax` upper (x <=) contraints."""
     model = original_model.copy()
     objective_vars = []
@@ -172,7 +179,7 @@ def apply_upper_relaxation(original_model: cobra.Model, to_relax: List[str]):
     return model, {v.name[2:] for v in objective_vars if abs(v.primal) > 0}
 
 
-def top_shadow_prices(solution: cobra.Solution, top: int = 1):
+def top_shadow_prices(solution: cobra.Solution, top: int = 1) -> pd.DataFrame:
     """Rank them from most to least sensitive in the model reactions.
 
     Parameters
@@ -191,7 +198,9 @@ def top_shadow_prices(solution: cobra.Solution, top: int = 1):
     return shadow_pr.sort_values()[:top]
 
 
-def relax_proteomics_greedy(model: Model, minimal_growth: float):
+def relax_proteomics_greedy(
+    model: Model, minimal_growth: float
+) -> Tuple[Dict, List[Dict]]:
     """Remove proteomics measurements with a set that enables the model to grow.
 
     Proteins are removed from the set iteratively based on sensitivity analysis

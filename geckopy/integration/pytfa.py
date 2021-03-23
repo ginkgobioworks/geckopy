@@ -11,8 +11,12 @@ import geckopy
 
 
 def adapt_gecko_to_thermo(
-    ec_model: geckopy.Model, thermodb: dict, compartment_data: dict,
-    solver: Optional[str] = None, *args, **kwargs
+    ec_model: geckopy.Model,
+    thermodb: dict,
+    compartment_data: dict,
+    solver: Optional[str] = None,
+    *args,
+    **kwargs
 ) -> pytfa.ThermoModel:
     """Prepare and convert gecko model to `pytfa.ThermoModel`.
 

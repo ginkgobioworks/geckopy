@@ -4,9 +4,10 @@ import hashlib
 import logging
 import re
 from math import isinf, isnan
-from typing import Dict, Union
+from typing import Dict, FrozenSet, Tuple, Union
 from warnings import warn
 
+import optlang
 from cobra import Configuration, Metabolite, Object, Reaction
 from cobra.exceptions import OptimizationError
 from cobra.util.context import resettable
@@ -160,7 +161,7 @@ class Protein(Object):
                 self.metabolites = {self: 1}
 
     @property
-    def concentration(self):
+    def concentration(self) -> float:
         r"""Get upper bounds as [E] (conventionally in $\frac{mmol}{gDW}$).
 
         [E] multiplied by the kcat (expressed in the reaction stoichiometry as
@@ -177,7 +178,7 @@ class Protein(Object):
         self.add_concentration(value)
 
     @property
-    def upper_bound(self):
+    def upper_bound(self) -> float:
         r"""Get upper bounds as [E] (conventionally in $\frac{mmol}{gDW}$).
 
         [E] multiplied by the kcat (expressed in the reaction stoichiometry as
@@ -210,19 +211,19 @@ class Protein(Object):
         self.update_variable_bounds()
 
     @property
-    def reverse_id(self):
+    def reverse_id(self) -> str:
         """Generate the id of reverse_variable from the reaction's id."""
         return "_".join(
             (self.id, "reverse", hashlib.md5(self.id.encode("utf-8")).hexdigest()[0:5])
         )
 
     @property
-    def contribution(self):
+    def contribution(self) -> str:
         """Get primal value (analogous to flux) in the most recent solution."""
         return self.flux
 
     @property
-    def flux(self):
+    def flux(self) -> float:
         """Get flux value in the most recent solution.
 
         Flux is the primal value of the corresponding variable in the model.
@@ -265,7 +266,7 @@ class Protein(Object):
             )
 
     @property
-    def forward_variable(self):
+    def forward_variable(self) -> optlang.Variable:
         """Get `optlang.Variable` representing the forward flux.
 
         Returns
@@ -281,7 +282,7 @@ class Protein(Object):
             return None
 
     @property
-    def reverse_variable(self):
+    def reverse_variable(self) -> optlang.Variable:
         """Get `optlang.Variable` representing the reverse flux.
 
         Returns
@@ -297,7 +298,7 @@ class Protein(Object):
             return None
 
     @property
-    def objective_coefficient(self):
+    def objective_coefficient(self) -> float:
         """Get the coefficient for this reaction in a linear objective (float).
 
         Assuming that the objective of the associated model is summation of
@@ -315,7 +316,7 @@ class Protein(Object):
             set_objective(self.model, {self: value}, additive=True)
 
     @property
-    def bounds(self):
+    def bounds(self) -> Tuple[float, float]:
         """Get or set the bounds directly from a tuple.
 
         Convenience method for setting upper and lower bounds in one line
@@ -336,7 +337,7 @@ class Protein(Object):
         self.upper_bound = upper
 
     @property
-    def metabolites(self):
+    def metabolites(self) -> Dict:
         """Get metabolite of the protein pseudoreaction as the protein itself."""
         return self._metabolites
 
@@ -345,7 +346,7 @@ class Protein(Object):
         self._metabolites = metabolites
 
     @property
-    def reactions(self):
+    def reactions(self) -> FrozenSet[Reaction]:
         """Retrieve immutable private reactions property."""
         return frozenset(self._reaction)
 
@@ -354,11 +355,11 @@ class Protein(Object):
         """Retrieve the model the reaction is a part of."""
         return self._model if hasattr(self, "_model") else None
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Print str representation as id."""
         return f"Protein {self.id}"
 
-    def _repr_html_(self):
+    def _repr_html_(self) -> str:
         return f"""
         <table>
             <tr>
@@ -413,7 +414,7 @@ class Kcats:
             for reac in self._protein.reactions
         }
 
-    def __getitem__(self, key: Union[Reaction, str]):
+    def __getitem__(self, key: Union[Reaction, str]) -> float:
         """Return the kcat of the protein in the Reaaction `key`."""
         self._update()
         if self._model_warn(key, "get"):

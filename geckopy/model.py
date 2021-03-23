@@ -4,7 +4,7 @@ from collections import defaultdict
 from copy import copy, deepcopy
 from functools import partial
 from math import isnan
-from typing import Dict, Iterator, Union
+from typing import Dict, Iterator, Optional, Tuple, Union
 
 import cobra
 import pandas as pd
@@ -118,7 +118,11 @@ class Model(cobra.Model):
             sum of the product of average abundances of unmesured proteins
             (from, e.g., paxDB) times their molecular weight.
         """
-        unmeasured_prots = [prot for prot in self.proteins if prot.concentration]
+        unmeasured_prots = [
+            prot
+            for prot in self.proteins
+            if prot.concentration and ~isnan(prot.concentration)
+        ]
         if not unmeasured_prots:
             return
         self.add_pool()
@@ -269,7 +273,9 @@ class Model(cobra.Model):
                     new_object = new.reactions.get_by_id(member.id)
                 elif isinstance(member, cobra.Gene):
                     new_object = new.genes.get_by_id(member.id)
-                elif isinstance(member, cobra.Group):
+                elif isinstance(member, Protein):
+                    new_object = new.proteins.get_by_id(member.id)
+                elif isinstance(member, cobra.core.Group):
                     new_object = new.genes.get_by_id(member.id)
                 else:
                     raise TypeError(
@@ -461,7 +467,9 @@ class Model(cobra.Model):
         # from cameo ...
         self._populate_solver(pruned)
 
-    def optimize(self, objective_sense=None, raise_error=False):
+    def optimize(
+        self, objective_sense: Optional[str] = None, raise_error: bool = False
+    ) -> Tuple[cobra.Solution, cobra.Solution]:
         """Optimize the model using flux balance analysis.
 
         Parameters
@@ -500,13 +508,13 @@ class Model(cobra.Model):
 
     def add_boundary(
         self,
-        metabolite,
-        type="exchange",
-        reaction_id=None,
-        lb=None,
-        ub=None,
-        sbo_term=None,
-    ):
+        metabolite: Union[cobra.Metabolite, Protein],
+        type: str = "exchange",
+        reaction_id: Optional[str] = None,
+        lb: Optional[float] = None,
+        ub: Optional[float] = None,
+        sbo_term: Optional[str] = None,
+    ) -> Reaction:
         """Add a boundary reaction for a given metabolite.
 
         Enzyme constraint changes: return an geckopy.Reaction.
