@@ -1,7 +1,7 @@
 """Integration layer with pytfa. Pytfa is not installed by default."""
 import pickle
 import zlib
-from typing import Dict
+from typing import Dict, Optional
 
 import cobra
 import pandas as pd
@@ -11,7 +11,8 @@ import geckopy
 
 
 def adapt_gecko_to_thermo(
-    ec_model: geckopy.Model, thermodb: dict, compartment_data: dict, *args, **kwargs
+    ec_model: geckopy.Model, thermodb: dict, compartment_data: dict,
+    solver: Optional[str] = None, *args, **kwargs
 ) -> pytfa.ThermoModel:
     """Prepare and convert gecko model to `pytfa.ThermoModel`.
 
@@ -37,6 +38,8 @@ def adapt_gecko_to_thermo(
         which will be passed to the pytfa.ThermoModel.__init__
     """
     tmodel = pytfa.ThermoModel(thermodb, ec_model, *args, **kwargs)
+    if solver:
+        tmodel.solver = solver
     tmodel.compartments = compartment_data
     thermodb["metabolites"]["protein"] = {
         "pKa": [7],
