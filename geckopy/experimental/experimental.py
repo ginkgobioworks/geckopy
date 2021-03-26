@@ -6,6 +6,9 @@ import pandas as pd
 from geckopy.model import Model
 
 
+__all__ = ["limit_proteins", "from_mmol_gDW", "from_copy_number"]
+
+
 def limit_proteins(model: cobra.Model, measurements: pd.DataFrame):
     """Apply proteomics `measurements` to `model`.
 

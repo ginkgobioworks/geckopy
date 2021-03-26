@@ -60,6 +60,8 @@ from geckopy.protein import Protein
 from geckopy.reaction import Reaction
 
 
+__all__ = ["read_sbml_ec_model", "write_sbml_ec_model"]
+
 LOGGER = logging.getLogger(__name__)
 config = Configuration()
 

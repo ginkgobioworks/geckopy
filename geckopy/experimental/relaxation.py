@@ -16,6 +16,14 @@ import sympy
 from geckopy.model import Model
 
 
+__all__ = [
+    "apply_proteomics_relaxation",
+    "apply_proteomics_elastic_relaxation",
+    "elastic_upper_relaxation",
+    "relax_proteomics_greedy",
+]
+
+
 def apply_proteomics_relaxation(
     original_model: Model, min_objective=0.0
 ) -> Tuple[Model, Set]:
