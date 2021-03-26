@@ -7,9 +7,12 @@ Proteins are Species, members of Group Protein, with:
 The MW are initialAssingments.
 """
 
+import datetime
 import logging
 import re
+import numbers
 from collections import defaultdict
+from math import isnan
 
 import libsbml
 from cobra import Configuration
@@ -17,19 +20,38 @@ from cobra.core.gene import parse_gpr
 from cobra.io.sbml import (
     F_GENE,
     F_GROUP,
+    F_GROUP_REV,
     F_REACTION,
     F_REPLACE,
     F_SPECIE,
+    F_GENE_REV,
+    F_SPECIE_REV,
+    F_REACTION_REV,
     LONG_SHORT_DIRECTION,
+    LOWER_BOUND_ID,
+    UNITS_FLUX,
+    UPPER_BOUND_ID,
+    BOUND_MINUS_INF,
+    BOUND_PLUS_INF,
+    SBO_DEFAULT_FLUX_BOUND,
     SBO_EXCHANGE_REACTION,
+    SBO_FBA_FRAMEWORK,
+    SHORT_LONG_DIRECTION,
+    ZERO_BOUND_ID,
+    linear_reaction_coefficients,
     CobraSBMLError,
     Gene,
     Group,
     Metabolite,
     _check_required,
+    _check,
+    _create_bound,
+    _create_parameter,
     _get_doc_from_filename,
     _parse_annotations,
     _parse_notes_dict,
+    _sbase_annotations,
+    _sbase_notes_dict,
 )
 from cobra.util.solver import set_objective
 
@@ -714,3 +736,345 @@ def read_sbml_ec_model(
         )
 
     return geckopy_model
+
+
+def write_sbml_ec_model(
+    ec_model: Model, filename: str, f_replace=F_REPLACE, units=True
+):
+    """Write cobra model to filename.
+
+    Enzyme constraint changes: proteins are written as metabolites with
+    initialAmount.
+
+    The created model is SBML level 3 version 1 (L1V3) with
+    fbc package v2 (fbc-v2).
+    If the given filename ends with the suffix ".gz" (for example,
+    "myfile.xml.gz"), libSBML assumes the caller wants the file to be
+    written compressed in gzip format. Similarly, if the given filename
+    ends with ".zip" or ".bz2", libSBML assumes the caller wants the
+    file to be compressed in zip or bzip2 format (respectively). Files
+    whose names lack these suffixes will be written uncompressed. Special
+    considerations for the zip format: If the given filename ends with
+    ".zip", the file placed in the zip archive will have the suffix
+    ".xml" or ".sbml".  For example, the file in the zip archive will
+    be named "test.xml" if the given filename is "test.xml.zip" or
+    "test.zip". Similarly, the filename in the archive will be
+    "test.sbml" if the given filename is "test.sbml.zip".
+
+    Parameters
+    ----------
+    cobra_model : geckopy.Model
+        Model instance which is written to SBML
+    filename : string
+        path to which the model is written
+    f_replace: dict of replacement functions for id replacement
+    """
+    cobra_model = ec_model
+    if f_replace is None:
+        f_replace = {}
+
+    sbml_ns = libsbml.SBMLNamespaces(3, 1)  # SBML L3V1
+    sbml_ns.addPackageNamespace("fbc", 2)  # fbc-v2
+
+    doc: libsbml.SBMLDocument = libsbml.SBMLDocument(sbml_ns)
+    doc.setPackageRequired("fbc", False)
+    doc.setSBOTerm(SBO_FBA_FRAMEWORK)
+
+    model: libsbml.Model = doc.createModel()
+    model_fbc: libsbml.FbcModelPlugin = model.getPlugin("fbc")
+    model_fbc.setStrict(True)
+
+    if cobra_model.id is not None:
+        model.setId(cobra_model.id)
+        model.setMetaId("meta_" + cobra_model.id)
+    else:
+        model.setMetaId("meta_model")
+    if cobra_model.name is not None:
+        model.setName(cobra_model.name)
+
+    # for parsing annotation corresponding to the model
+    _sbase_annotations(model, cobra_model.annotation)
+    # for parsing notes corresponding to the model
+    _sbase_notes_dict(model, cobra_model.notes)
+
+    # Meta information (ModelHistory) related to SBMLDocument
+    if hasattr(cobra_model, "_sbml"):
+        meta = cobra_model._sbml
+        if "annotation" in meta:
+            _sbase_annotations(doc, meta["annotation"])
+        if "notes" in meta:
+            _sbase_notes_dict(doc, meta["notes"])
+
+        history: libsbml.ModelHistory = libsbml.ModelHistory()
+        if "created" in meta and meta["created"]:
+            history.setCreatedDate(meta["created"])
+        else:
+            time = datetime.datetime.now()
+            timestr = time.strftime("%Y-%m-%dT%H:%M:%S")
+            date = libsbml.Date(timestr)
+            _check(history.setCreatedDate(date), "set creation date")
+            _check(history.setModifiedDate(date), "set modified date")
+
+        if "creators" in meta:
+            for cobra_creator in meta["creators"]:  # noqa: E501
+                creator: libsbml.ModelCreator = libsbml.ModelCreator()
+                if cobra_creator.get("familyName", None):
+                    creator.setFamilyName(cobra_creator["familyName"])
+                if cobra_creator.get("givenName", None):
+                    creator.setGivenName(cobra_creator["givenName"])
+                if cobra_creator.get("organisation", None):
+                    creator.setOrganisation(cobra_creator["organisation"])
+                if cobra_creator.get("email", None):
+                    creator.setEmail(cobra_creator["email"])
+
+                _check(history.addCreator(creator), "adding creator to ModelHistory.")
+
+        # TODO: Will be implemented as part of
+        #  https://github.com/opencobra/cobrapy/issues/810
+        # _check(model.setModelHistory(history), 'set model history')
+
+    # Units
+    if units:
+        flux_udef = model.createUnitDefinition()  # type:libsbml.UnitDefinition
+        flux_udef.setId(UNITS_FLUX[0])
+        for u in UNITS_FLUX[1]:
+            unit = flux_udef.createUnit()  # type: libsbml.Unit
+            unit.setKind(u.kind)
+            unit.setExponent(u.exponent)
+            unit.setScale(u.scale)
+            unit.setMultiplier(u.multiplier)
+
+    # minimum and maximum value from model
+    if len(cobra_model.reactions) > 0:
+        min_value = min(cobra_model.reactions.list_attr("lower_bound"))
+        max_value = max(cobra_model.reactions.list_attr("upper_bound"))
+    else:
+        min_value = config.lower_bound
+        max_value = config.upper_bound
+
+    _create_parameter(
+        model, pid=LOWER_BOUND_ID, value=min_value, sbo=SBO_DEFAULT_FLUX_BOUND
+    )
+    _create_parameter(
+        model, pid=UPPER_BOUND_ID, value=max_value, sbo=SBO_DEFAULT_FLUX_BOUND
+    )
+    _create_parameter(model, pid=ZERO_BOUND_ID, value=0, sbo=SBO_DEFAULT_FLUX_BOUND)
+    _create_parameter(
+        model, pid=BOUND_MINUS_INF, value=-float("Inf"), sbo=SBO_DEFAULT_FLUX_BOUND
+    )
+    _create_parameter(
+        model, pid=BOUND_PLUS_INF, value=float("Inf"), sbo=SBO_DEFAULT_FLUX_BOUND
+    )
+
+    # Compartments
+    for cid, name in cobra_model.compartments.items():
+        compartment: libsbml.Compartment = model.createCompartment()
+        compartment.setId(cid)
+        compartment.setName(name)
+        compartment.setConstant(True)
+
+    # Species
+    for metabolite in cobra_model.metabolites:
+        specie: libsbml.Species = model.createSpecies()
+        specie.setId(
+            f_replace[F_SPECIE_REV](metabolite.id)
+            if f_replace and F_SPECIE_REV in f_replace
+            else metabolite.id
+        )
+        specie.setConstant(False)
+        specie.setBoundaryCondition(False)
+        specie.setHasOnlySubstanceUnits(False)
+        specie.setName(metabolite.name)
+        specie.setCompartment(metabolite.compartment)
+        s_fbc: libsbml.FbcSpeciesPlugin = specie.getPlugin("fbc")
+        if metabolite.charge is not None:
+            s_fbc.setCharge(metabolite.charge)
+        if metabolite.formula is not None:
+            s_fbc.setChemicalFormula(metabolite.formula)
+
+        _sbase_annotations(specie, metabolite.annotation)
+        _sbase_notes_dict(specie, metabolite.notes)
+
+    for metabolite in ec_model.proteins:
+        specie: libsbml.Species = model.createSpecies()
+        specie.setId(
+            f_replace[F_SPECIE_REV](metabolite.id)
+            if f_replace and F_SPECIE_REV in f_replace
+            else metabolite.id
+        )
+        specie.setConstant(False)
+        specie.setBoundaryCondition(False)
+        specie.setHasOnlySubstanceUnits(False)
+        specie.setName(metabolite.name)
+        specie.setCompartment(metabolite.compartment)
+        if isinstance(metabolite.concentration, numbers.Number) and not isnan(
+            metabolite.concentration
+        ):
+            specie.setInitialAmount(metabolite.concentration)
+        s_fbc: libsbml.FbcSpeciesPlugin = specie.getPlugin("fbc")
+        if metabolite.charge is not None:
+            s_fbc.setCharge(metabolite.charge)
+        if metabolite.formula is not None:
+            s_fbc.setChemicalFormula(metabolite.formula)
+
+        _sbase_annotations(specie, metabolite.annotation)
+
+    # Genes
+    for cobra_gene in cobra_model.genes:
+        gp: libsbml.GeneProduct = model_fbc.createGeneProduct()
+        gid = cobra_gene.id
+        if f_replace and F_GENE_REV in f_replace:
+            gid = f_replace[F_GENE_REV](gid)
+        gp.setId(gid)
+        gname = cobra_gene.name
+        if gname is None or len(gname) == 0:
+            gname = gid
+        gp.setName(gname)
+        gp.setLabel(gid)
+
+        _sbase_annotations(gp, cobra_gene.annotation)
+        _sbase_notes_dict(gp, cobra_gene.notes)
+
+    # Objective
+    objective: libsbml.Objective = model_fbc.createObjective()
+    objective.setId("obj")
+    objective.setType(SHORT_LONG_DIRECTION[cobra_model.objective.direction])
+    model_fbc.setActiveObjectiveId("obj")
+
+    # Reactions
+    reaction_coefficients = linear_reaction_coefficients(cobra_model)
+    for cobra_reaction in cobra_model.reactions:
+        rid = cobra_reaction.id
+        if f_replace and F_REACTION_REV in f_replace:
+            rid = f_replace[F_REACTION_REV](rid)
+        reaction: libsbml.Reaction = model.createReaction()
+        reaction.setId(rid)
+        reaction.setName(cobra_reaction.name)
+        reaction.setFast(False)
+        reaction.setReversible((cobra_reaction.lower_bound < 0))
+        _sbase_annotations(reaction, cobra_reaction.annotation)
+        _sbase_notes_dict(reaction, cobra_reaction.notes)
+
+        # stoichiometry
+        for metabolite, stoichiometry in cobra_reaction._metabolites.items():
+            sid = metabolite.id
+            if f_replace and F_SPECIE_REV in f_replace:
+                sid = f_replace[F_SPECIE_REV](sid)
+            if stoichiometry < 0:
+                sref = (
+                    reaction.createReactant()
+                )  # noqa: E501 type: libsbml.SpeciesReference
+                sref.setSpecies(sid)
+                sref.setStoichiometry(-stoichiometry)
+                sref.setConstant(True)
+            else:
+                sref = (
+                    reaction.createProduct()
+                )  # noqa: E501 type: libsbml.SpeciesReference
+                sref.setSpecies(sid)
+                sref.setStoichiometry(stoichiometry)
+                sref.setConstant(True)
+
+        # bounds
+        r_fbc: libsbml.FbcReactionPlugin = reaction.getPlugin("fbc")
+        r_fbc.setLowerFluxBound(
+            _create_bound(
+                model,
+                cobra_reaction,
+                "lower_bound",
+                f_replace=f_replace,
+                units=units,
+                flux_udef=flux_udef,
+            )
+        )
+        r_fbc.setUpperFluxBound(
+            _create_bound(
+                model,
+                cobra_reaction,
+                "upper_bound",
+                f_replace=f_replace,
+                units=units,
+                flux_udef=flux_udef,
+            )
+        )
+
+        # GPR
+        gpr = cobra_reaction.gene_reaction_rule
+        if gpr is not None and len(gpr) > 0:
+
+            # replace ids in string
+            if f_replace and F_GENE_REV in f_replace:
+                gpr = gpr.replace("(", "( ")
+                gpr = gpr.replace(")", " )")
+                tokens = gpr.split()
+
+                for k in range(len(tokens)):
+                    if tokens[k] not in ["and", "or", "(", ")"]:
+                        tokens[k] = f_replace[F_GENE_REV](tokens[k])
+                gpr_new = " ".join(tokens)
+            else:
+                gpr_new = gpr
+
+            gpa: libsbml.GeneProductAssociation = (
+                r_fbc.createGeneProductAssociation()
+            )  # noqa: E501
+            # uses ids to identify GeneProducts (True),
+            # does not create GeneProducts (False)
+            _check(gpa.setAssociation(gpr_new, True, False), "set gpr: " + gpr_new)
+
+        # objective coefficients
+        if reaction_coefficients.get(cobra_reaction, 0) != 0:
+            flux_obj: libsbml.FluxObjective = (
+                objective.createFluxObjective()
+            )  # noqa: E501
+            flux_obj.setReaction(rid)
+            flux_obj.setCoefficient(cobra_reaction.objective_coefficient)
+
+    # write groups
+    if len(cobra_model.groups) > 0:
+        doc.enablePackage(
+            "http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True
+        )
+        doc.setPackageRequired("groups", False)
+        model_group: libsbml.GroupsModelPlugin = model.getPlugin("groups")  # noqa: E501
+        for cobra_group in cobra_model.groups:
+            group: libsbml.Group = model_group.createGroup()
+            if f_replace and F_GROUP_REV in f_replace:
+                gid = f_replace[F_GROUP_REV](cobra_group.id)
+            else:
+                gid = cobra_group.id
+            group.setId(gid)
+            group.setName(cobra_group.name)
+            group.setKind(cobra_group.kind)
+
+            _sbase_notes_dict(group, cobra_group.notes)
+            _sbase_annotations(group, cobra_group.annotation)
+
+            for cobra_member in cobra_group.members:
+                member: libsbml.Member = group.createMember()
+                mid = cobra_member.id
+                m_type = str(type(cobra_member))
+
+                # id replacements
+                if "Reaction" in m_type:
+                    if f_replace and F_REACTION_REV in f_replace:
+                        mid = f_replace[F_REACTION_REV](mid)
+                if "Metabolite" in m_type or "Protein" in m_type:
+                    if f_replace and F_SPECIE_REV in f_replace:
+                        mid = f_replace[F_SPECIE_REV](mid)
+                if "Gene" in m_type:
+                    if f_replace and F_GENE_REV in f_replace:
+                        mid = f_replace[F_GENE_REV](mid)
+
+                member.setIdRef(mid)
+                if cobra_member.name and len(cobra_member.name) > 0:
+                    member.setName(cobra_member.name)
+
+    if isinstance(filename, str):
+        # write to path
+        libsbml.writeSBMLToFile(doc, filename)
+
+    elif hasattr(filename, "write"):
+        # write to file handle
+        sbml_str = libsbml.writeSBMLToString(doc)
+        filename.write(sbml_str)

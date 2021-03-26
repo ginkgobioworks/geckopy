@@ -1,4 +1,8 @@
 """Test Input/Output capabilities."""
+import os
+
+import pytest
+
 import geckopy
 
 
@@ -35,3 +39,20 @@ def test_protein_parsing_does_not_get_normal_metabolites(dummy_ec_model):
     mets = set(dummy_ec_model.metabolites)
     prots = set(dummy_ec_model.proteins)
     assert mets ^ prots == mets | prots
+
+
+def test_serialized_model_grows(slim_solution, ec_model):
+    """Check that concentrations are properly saved on SBML serialization."""
+    geckopy.io.write_sbml_ec_model(ec_model, "_tmpfull.xml")
+    redeserialized = geckopy.io.read_sbml_ec_model("_tmpfull.xml")
+    assert pytest.approx(redeserialized.slim_optimize()) == pytest.approx(slim_solution)
+    os.remove("_tmpfull.xml")
+
+
+def test_serialized_model_has_concentrations(dummy_ec_model):
+    """Check that concentrations are properly saved on SBML serialization."""
+    dummy_ec_model.proteins.prot_P0A825.concentration = 123
+    geckopy.io.write_sbml_ec_model(dummy_ec_model, "_tmp.xml")
+    redeserialized = geckopy.io.read_sbml_ec_model("_tmp.xml")
+    assert redeserialized.proteins.prot_P0A825.concentration == 123
+    os.remove("_tmp.xml")
