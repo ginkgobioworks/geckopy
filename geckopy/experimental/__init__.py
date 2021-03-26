@@ -1,3 +1,3 @@
-from geckopy.experimental import relaxation, molecular_weights
+from geckopy.experimental import molecular_weights, relaxation
 
 from .experimental import *

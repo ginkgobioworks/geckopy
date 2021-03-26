@@ -9,8 +9,8 @@ The MW are initialAssingments.
 
 import datetime
 import logging
-import re
 import numbers
+import re
 from collections import defaultdict
 from math import isnan
 
@@ -18,33 +18,32 @@ import libsbml
 from cobra import Configuration
 from cobra.core.gene import parse_gpr
 from cobra.io.sbml import (
+    BOUND_MINUS_INF,
+    BOUND_PLUS_INF,
     F_GENE,
+    F_GENE_REV,
     F_GROUP,
     F_GROUP_REV,
     F_REACTION,
+    F_REACTION_REV,
     F_REPLACE,
     F_SPECIE,
-    F_GENE_REV,
     F_SPECIE_REV,
-    F_REACTION_REV,
     LONG_SHORT_DIRECTION,
     LOWER_BOUND_ID,
-    UNITS_FLUX,
-    UPPER_BOUND_ID,
-    BOUND_MINUS_INF,
-    BOUND_PLUS_INF,
     SBO_DEFAULT_FLUX_BOUND,
     SBO_EXCHANGE_REACTION,
     SBO_FBA_FRAMEWORK,
     SHORT_LONG_DIRECTION,
+    UNITS_FLUX,
+    UPPER_BOUND_ID,
     ZERO_BOUND_ID,
-    linear_reaction_coefficients,
     CobraSBMLError,
     Gene,
     Group,
     Metabolite,
-    _check_required,
     _check,
+    _check_required,
     _create_bound,
     _create_parameter,
     _get_doc_from_filename,
@@ -52,6 +51,7 @@ from cobra.io.sbml import (
     _parse_notes_dict,
     _sbase_annotations,
     _sbase_notes_dict,
+    linear_reaction_coefficients,
 )
 from cobra.util.solver import set_objective
 
