@@ -107,8 +107,8 @@ class Model(cobra.Model):
         measurements, along with corresponding draw reactions, and add these to
         the common protein pool and reaction.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         p_total: float
             measured total protein fraction in cell in g protein / gDW
         sigma_saturation_factor: float

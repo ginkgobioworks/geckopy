@@ -8,6 +8,8 @@ import pandas as pd
 
 from geckopy.model import Model
 
+__all__ = ["get_uniprot", "parse_mw", "extract_proteins"]
+
 
 DEFAULT_PARAMS = {"from": "ACC+ID", "to": "ACC", "format": "txt", "query": ""}
 URL = "https://www.uniprot.org/uploadlists/"
@@ -18,8 +20,8 @@ pat_prot = re.compile(r"prot_(.+)")
 def get_uniprot(query: str) -> str:
     """Get uniprot information corresponding to a query.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     query: str
         an UNIPROT ID(s), separated by spaces
 
