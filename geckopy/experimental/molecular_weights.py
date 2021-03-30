@@ -8,6 +8,7 @@ import pandas as pd
 
 from geckopy.model import Model
 
+
 __all__ = ["get_uniprot", "parse_mw", "extract_proteins"]
 
 

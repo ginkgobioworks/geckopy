@@ -13,18 +13,19 @@
 import sys
 from os.path import dirname, join
 
+
 SRC_PATH = join(dirname(dirname(__file__)), "geckopy")
 sys.path.insert(0, SRC_PATH)
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'geckopy'
+project = "geckopy"
 # copyright = '
 # author = ''
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = "0.0.1"
 
 
 # -- General configuration ---------------------------------------------------
@@ -33,30 +34,30 @@ release = '0.0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.ifconfig',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.doctest',
-    'autoapi.extension',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.doctest",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.coverage",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.ifconfig",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.doctest",
+    "autoapi.extension",
 ]
 
 autoapi_dirs = [SRC_PATH]
 
-intersphinx_mapping = {'cobrapy': ('https://cobrapy.readthedocs.io/en/latest/', None)}
+intersphinx_mapping = {"cobrapy": ("https://cobrapy.readthedocs.io/en/latest/", None)}
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-pygments_style = 'sphinx'
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+pygments_style = "sphinx"
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -64,22 +65,21 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
-html_favicon = '_static/favicon.ico'
-html_static_path = ['_static']
+html_theme = "alabaster"
+html_favicon = "_static/favicon.ico"
+html_static_path = ["_static"]
 
 html_theme_options = {
     # 'logo': 'geckopy_lojo.png',
-    'logo': 'logo.png',
-    'touch_icon': 'logo.png',
-    'github_banner': True,
-    'github_user': 'ginkgobioworks',
-    'github_repo': 'geckopy',
-    'page_width': '1200px'
+    "logo": "logo.png",
+    "touch_icon": "logo.png",
+    "github_banner": True,
+    "github_user": "ginkgobioworks",
+    "github_repo": "geckopy",
+    "page_width": "1200px",
 }
 mathjax_path = (
-    "https://cdn.mathjax.org/mathjax/latest/"
-    "MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+    "https://cdn.mathjax.org/mathjax/latest/" "MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 )
 
 # -- Options for LaTeX output --------------------------------------------------
