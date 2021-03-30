@@ -376,8 +376,13 @@ class Protein(Object):
             </tr><tr>
                 <td><strong>Upper bound</strong></td><td>{self.upper_bound}</td>
             </tr><tr>
+            </tr><tr>
+                <td><strong>Mw</strong></td><td>{self.mw}</td>
+            </tr><tr>
                 <td><strong>In {len(self.reactions)} reaction(s)</strong></td><td>
-                    {format_long_string(", ".join(r.id for r in self.reactions), 200)}
+                    {format_long_string(", ".join(
+                        f'{r.id} ({kcat:.2f})' for r, kcat in self.kcats.items()
+                    ), 200)}
                 </td>
             </tr>
         </table>
@@ -392,14 +397,15 @@ class Kcats:
 
     Example
     -------
-    ```
-    # dictionary of Reaction to kcat in s
-    model.proteins.prot_P0A796.kcats
-    # the user inputs the kcat in 1/s
-    model.proteins.prot_P0A796.kcats["PFKNo1"] = 1 / 30
-    # the corresponding stoichiometry value is in -h
-    ec_model.reactions.PFKNo1.metabolites[ec_model.proteins.prot_P0A796] == -1/120
-    ```
+    .. doctest::
+
+        # dictionary of Reaction to kcat in s
+        >>> model.proteins.prot_P0A796.kcats
+        # the user inputs the kcat in 1/s
+        >>> model.proteins.prot_P0A796.kcats["PFKNo1"] = 1 / 30
+        # the corresponding stoichiometry value is in -h
+        >>> ec_model.reactions.PFKNo1.metabolites[ec_model.proteins.prot_P0A796] == -1/120
+
     """
 
     def __init__(self, prot: Protein):
@@ -445,14 +451,22 @@ class Kcats:
 
     def __iter__(self):
         """Iterate inner dict."""
+        self._update()
         return self._reac_to_kcat.__iter__()
+
+    def items(self):
+        """Iterate inner items."""
+        self._update()
+        return self._reac_to_kcat.items()
 
     def keys(self):
         """Return inner dict's keys."""
+        self._update()
         return self._reac_to_kcat.keys()
 
     def values(self):
         """Return inner dict's values."""
+        self._update()
         return self._reac_to_kcat.values()
 
     def __repr__(self):
