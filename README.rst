@@ -13,7 +13,7 @@ the modeling capabilities in genome-scale models.
 
 ..
 
-   Based on `Sanchez et al., 2017 <https://dx.doi.org/10.15252/msb.20167411>`_.
+   Based on `Sánchez et al., 2017 <https://dx.doi.org/10.15252/msb.20167411>`_.
 
 
 Check `https://github.com/SysBioChalmers/GECKO <https://github.com/SysBioChalmers/GECKO>`_
@@ -65,8 +65,8 @@ Add pool constraint.
    print(exp_model.optimize())
    print(exp_model.protein_pool_exchange)
 
-Build the documetation
-----------------------
+Build the documentation
+-----------------------
 To build the documentation locally, run 
 
 .. code-block:: shell
