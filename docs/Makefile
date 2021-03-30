@@ -8,6 +8,11 @@ SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
 
+ipy2rst:
+	for i in notebooks/*.ipynb; do if [ $$i != "notebooks/index.ipynb" ] ; then jupyter nbconvert $$i --to rst; fi done
+	find ./notebooks -name '*.rst' -type f -exec sed -i -e 's/``/`/g' {} \;
+	mv notebooks/*.rst .
+
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

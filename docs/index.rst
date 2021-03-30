@@ -3,12 +3,28 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to geckopy's documentation!
-=================================
+.. include:: ../README.rst
+
+
+User's guide
+~~~~~~~~~~~~
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+
+    installation
+    01-getting-started
+    02-experimental
+    03-thermodynamics
+
+Dev's guide
+~~~~~~~~~~~
+
+.. toctree::
+    :maxdepth: 2
+
+    design
+    project_overview
 
 
 
