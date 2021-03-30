@@ -64,3 +64,13 @@ Add pool constraint.
    )
    print(exp_model.optimize())
    print(exp_model.protein_pool_exchange)
+
+Build the documetation
+----------------------
+To build the documentation locally, run 
+
+.. code-block:: shell
+
+  cd docs
+  make ipy2rst  # if there are notebooks for the docs at docs/notebooks
+  make html
