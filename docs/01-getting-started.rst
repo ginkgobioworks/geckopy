@@ -362,7 +362,7 @@ pseudometabolite in the reaction.
 
 -  The units of the input are in :math:`\frac{1}{s}`.
 -  This input is translated to :math:`h` in the stoichiometric
-   coeffient.
+   coefficient.
 
 .. code:: ipython3
 

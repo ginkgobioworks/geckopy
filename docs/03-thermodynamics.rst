@@ -39,11 +39,10 @@ Load the model
 Load the enzyme constraint model and transform it to a thermo model.
 
 In this step, the proteins are addecuately added to the Thermodynamic
-model with a formation energy of 0, which effectively results in them
-being ignored by the :math:`\Delta G_r` calculations. This is required
-so that they are not interpreted as metabolites with missing
-thermodynamic information, which would invalidate all reactions with
-proteins.
+model with a formation energy of 0. Thus, proteins pseudometabolites are
+ignored by the :math:`\Delta G_r` calculations. This is required so that they
+are not interpreted as metabolites with missing thermodynamic information,
+which would invalidate all reactions with proteins.
 
 .. code:: ipython3
 

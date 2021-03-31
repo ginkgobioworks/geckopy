@@ -26,7 +26,7 @@ The :class:`~geckopy.Model` class, which is derived from
 :doc:`cobrapy:autoapi/cobra/core/model/index`.
 
 * All methods that directly mention :class:`~geckopy.Reaction` were overwritten.
-  This would be also requred if any component of cobrapy's `Model` is derived
+  This would be also required if any component of cobrapy's `Model` is derived
   in geckopy.
 * Proteins were added to the population of the model.
 * Pool constraint methods.
@@ -58,5 +58,7 @@ geckopy/experimental/
 ~~~~~~~~~~~~~~~~~~~~~
 
 Functionality for integration of experimental data. It includes the relaxation
-algoorithms and utility functions for the annotation of molecular weights from
-uniprot ids.
+algorithms and utility functions for the annotation of molecular weights from
+`Uniprot accesion numbers`_.
+
+.. _Uniprot accesion numbers: https://www.uniprot.org/help/accession_numbers

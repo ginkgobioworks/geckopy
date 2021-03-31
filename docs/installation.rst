@@ -36,7 +36,7 @@ Pytfa is required for running thermodynamics simulations.
 
     pip install geckopy[pytfa]
 
-The required dependeciens for development can be installed with
+The required dependencies for development can be installed with
 
 .. code-block:: shell
 

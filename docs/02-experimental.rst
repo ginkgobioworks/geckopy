@@ -1,9 +1,9 @@
 Experimental data
 =================
 
--  The Final proteomic data in the model has units of
+-  The Final proteomics data in the model has units of
    :math:`\frac{\text{mmol}}{\text{gDW}}`.
--  geckopy provides the tranformation from copies per cell.
+-  geckopy provides the transformation from copies per cell.
 
 .. math::
 
@@ -70,11 +70,11 @@ as implemented in `Chinnek and Dravnieks,
 
 This method returns the relaxed model with the Irreducibly Inconsistent
 Set of functional constraints (IIS); that is, all the proteins that
-affect the feashibility of the problem.
+affect the feasibility of the problem.
 
 Please note that not all proteins variables in the ISS must be relaxed
-for the model to be feashible, but all of the proteins in the ISS are
-part of one set of proteins that makes the model feashible.
+for the model to be feasible, but all of the proteins in the ISS are
+part of one set of proteins that makes the model feasible.
 
 .. code:: ipython3
 
@@ -121,10 +121,10 @@ Pool constraint
 
     ec_model = geckopy.io.read_sbml_ec_model(join(DATA, "eciML1515.xml.gz"))
 
-If there are proteins with missing concentrations in the model but the
-total amount of protein that the cell can allocate is known, a pool
-constraint can be applied to the :class:`~geckopy.protein.Proteins`\ s
-to account for protein crowding.
+A pool constraint can be applied to the :class:`~geckopy.protein.Proteins`\ s
+to account for protein crowding. This is useful when there are proteins with
+missing concentrations in the model but the total amount of protein that the
+cell can allocate is known
 
 The amount of flux a protein can take from the pool is their
 :math:`M_W 10^{-3}`. This value can be scrapped with
