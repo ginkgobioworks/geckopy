@@ -25,6 +25,7 @@ Dev's guide
 
     design
     project_overview
+    contributing
 
 
 
