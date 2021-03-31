@@ -13,11 +13,10 @@ the modeling capabilities in genome-scale models.
 
 ..
 
-   Based on `Sánchez et al., 2017 <https://dx.doi.org/10.15252/msb.20167411>`_.
+   Based on `Sánchez et al., 2017`_.
 
 
-Check `https://github.com/SysBioChalmers/GECKO <https://github.com/SysBioChalmers/GECKO>`_
-for the matlab counterpart.
+Check https://github.com/SysBioChalmers/GECKO for the matlab counterpart.
 
 Overview
 --------
@@ -75,3 +74,21 @@ To build the documentation locally, run
   cd docs
   make ipy2rst  # if there are notebooks for the docs at docs/notebooks
   make html
+
+
+License
+-------
+Copyright 2021 Ginkgo Bioworks.
+
+Licensed under Apache License, Version 2.0, (LICENSE_ or
+http://www.apache.org/licenses/LICENSE-2.0).
+
+Contribution
+~~~~~~~~~~~~
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall 
+be licensed as above, without any additional terms or conditions.
+
+.. _Sánchez et al., 2017: https://dx.doi.org/10.15252/msb.20167411
+.. _LICENSE: ./LICENSE
+.. _virtualenv: https://pypi.python.org/pypi/virtualenv
