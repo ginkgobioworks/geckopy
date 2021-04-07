@@ -14,5 +14,6 @@
 
 from geckopy import experimental, io
 
+from .flux_analysis import flux_variability_analysis
 from .model import Model
 from .protein import Protein
