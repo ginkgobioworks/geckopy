@@ -20,15 +20,24 @@ However, CPLEX and gurobi are both consistent in the same solution.
 from geckopy import flux_variability_analysis
 
 
-def test_fva_with_fixed_reactions(ec_model):
+def test_fva_with_fixed_reactions(ec_model, fva_targets):
     """Test that fva with a fixed reaction returns the expected results."""
-    df = flux_variability_analysis(ec_model, fixed_reactions="EX_glc__D_e")
-    print((df.maximum - df.minimum).sum())
-    assert ((df.maximum - df.minimum) > 1e-3).sum() == 533
-    assert df.shape[0] == 2711
+    df = flux_variability_analysis(
+        ec_model,
+        fixed_reactions="EX_glc__D_e",
+        ignored_reactions=[
+            reac.id for reac in ec_model.reactions if reac.id not in fva_targets
+        ],
+    )
+    assert ((df.maximum - df.minimum) > 1e-3).sum() == 20
 
 
-def test_fva(ec_model):
+def test_fva(ec_model, fva_targets):
     """Test that fva returns the expected results."""
-    df = flux_variability_analysis(ec_model)
-    assert ((df.maximum - df.minimum) > 1e-3).sum() == 534
+    df = flux_variability_analysis(
+        ec_model,
+        ignored_reactions=[
+            reac.id for reac in ec_model.reactions if reac.id not in fva_targets
+        ],
+    )
+    assert ((df.maximum - df.minimum) > 1e-3).sum() == 21

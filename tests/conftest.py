@@ -15,6 +15,7 @@
 """Set session level fixtures."""
 
 from os.path import dirname, join
+from typing import List
 
 import cobra
 import pytest
@@ -91,3 +92,31 @@ def mnx():
 def compartment_data():
     """Path to compartment data from pytfa."""
     return join(dirname(__file__), "data", "compartment_data.json")
+
+
+@pytest.fixture(scope="session")
+def fva_targets() -> List[str]:
+    """Path to compartment data from pytfa."""
+    return [
+        "SUCASPtpp",
+        "arm_NDPK1",
+        "SUCCt1pp",
+        "FUMt1pp",
+        "SUCFUMtpp",
+        "ASPtpp",
+        "arm_ALATA_L",
+        "GAPDNo1",
+        "ENONo1",
+        "GLCtex_copy1",
+        "TPINo1",
+        "PGINo1",
+        "ICDHyrNo1",
+        "MDHNo1",
+        "G6PDH2rNo1",
+        "GHMT2rNo1",
+        "RPENo1",
+        "MTHFDNo1",
+        "MTHFCNo1",
+        "CBMKrNo1",
+        "EX_glc__D_e",
+    ]
