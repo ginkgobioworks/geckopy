@@ -24,6 +24,7 @@ import cobra
 import pandas as pd
 from cobra.util.solver import set_objective
 from numpy import zeros
+from tqdm import tqdm
 
 from .model import Model
 
@@ -144,6 +145,8 @@ def flux_variability_analysis(
     ec_model: Model,
     fixed_reactions: Optional[List[str]] = None,
     ignored_reactions: Optional[List[str]] = None,
+    n_proc: Optional[int] = config.processes,
+    inplace: bool = False,
 ) -> pd.DataFrame:
     r"""Flux variability analysis for EC models.
 
@@ -168,6 +171,10 @@ def flux_variability_analysis(
         List of reactions to be fixed (as in the second point in the description)
     ignored_reactions: Optional[List[str]]
         List of reactions to be ignored
+    n_proc: int
+        Number of processes to use. Default: the number of logical CPUs.
+    inplace: bool
+        Whether to copy the model to then apply the changes
 
     Returns
     -------
@@ -180,7 +187,7 @@ def flux_variability_analysis(
     fixed_reactions = _sanitize_input_list(fixed_reactions)
     ignored_reactions = _sanitize_input_list(ignored_reactions)
 
-    model = ec_model.copy()
+    model = ec_model if inplace else ec_model.copy()
     fixed_objective = model.slim_optimize()
     _get_objective_reaction(model).lb = fixed_objective
 
@@ -212,15 +219,26 @@ def flux_variability_analysis(
         f"{len(reac_ids)} effective reactions"
     )
 
-    processes = config.processes
-    chunk_size = len(reac_ids) // processes
-    with Pool(
-        processes,
-        initializer=_init_worker,
-        initargs=(model,),
-    ) as pool:
-        for rxn_id, lb, ub in pool.imap_unordered(
-            _fva_step, reac_ids, chunksize=chunk_size
+    chunk_size = len(reac_ids) // n_proc
+    if n_proc > 1:
+        with Pool(
+            n_proc,
+            initializer=_init_worker,
+            initargs=(model,),
+        ) as pool:
+            for rxn_id, lb, ub in tqdm(
+                pool.imap_unordered(_fva_step, reac_ids, chunksize=chunk_size),
+                total=len(reac_ids),
+                desc="FVA",
+            ):
+                fva_result.at[rxn_id, :] = lb, ub
+    else:
+        _init_worker(model)
+        for rxn_id, lb, ub in tqdm(
+            map(_fva_step, reac_ids),
+            total=len(reac_ids),
+            desc="FVA",
         ):
             fva_result.at[rxn_id, :] = lb, ub
+
     return fva_result
