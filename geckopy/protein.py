@@ -78,10 +78,12 @@ class Protein(Object):
         concentration: float = None,
         kcat: float = 1.0,
         molecular_weight: float = 0.0,
+        name: str = "",
     ):
         """Initialize with id."""
         self.concentration = concentration
         self.mw = molecular_weight
+        self.name = name
         self._flux = None
         self.lower_bound = 0
         self._reaction = set()

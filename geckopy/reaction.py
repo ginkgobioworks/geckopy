@@ -33,7 +33,13 @@ class Reaction(cobra.Reaction):
             if isinstance(met, Protein)
         }
 
-    def add_protein(self, id: str, kcat: float, concentration: Optional[float] = None):
+    def add_protein(
+        self,
+        id: str,
+        kcat: float,
+        concentration: Optional[float] = None,
+        name: Optional[str] = None,
+    ):
         """Add a protein to the reaction.
 
         Parameters
@@ -41,8 +47,10 @@ class Reaction(cobra.Reaction):
         id: str
         kcat: float (1/s)
         concentration: float
+        name: str
         """
-        prot = Protein(id, kcat)
+        name = name if name is not None else id
+        prot = Protein(id, kcat, name=name)
         coefficient = -1 / (kcat * 3600)
         prot.add_concentration(concentration)
         _id_to_metabolites = dict([(x.id, x) for x in self._metabolites])
