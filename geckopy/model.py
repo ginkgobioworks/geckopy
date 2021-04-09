@@ -439,11 +439,13 @@ class Model(cobra.Model):
             reaction._model = self
             # Build a `list()` because the dict will be modified in the loop.
             for metabolite in list(reaction.metabolites):
-                target = (
-                    self.proteins if metabolite in self.proteins else self.metabolites
-                )
+                is_prot = isinstance(metabolite, Protein)
+                target = self.proteins if is_prot else self.metabolites
                 if metabolite not in target:
-                    self.add_metabolites(metabolite)
+                    if is_prot:
+                        self.add_proteins([metabolite])
+                    else:
+                        self.add_metabolites(metabolite)
 
                 # A copy of the metabolite exists in the model, the reaction
                 # needs to point to the metabolite in the model.

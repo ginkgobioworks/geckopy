@@ -18,6 +18,8 @@ from math import isnan
 
 from pytest import approx
 
+import geckopy
+
 
 def test_constraint_pool_changes_objective_value(slim_solution, ec_model):
     """Test .proteins interface."""
@@ -36,3 +38,13 @@ def test_added_protein_modifies_solution(ec_model, slim_solution):
         id="prot_INVNTD", kcat=0.3, concentration=2e-5
     )
     assert approx(ec_model.slim_optimize()) != approx(slim_solution)
+
+
+def test_added_reaction_gathers_proteins(ec_model):
+    """Add a reaction with a protein and check that it is correctly structured."""
+    model = geckopy.Model("one_reaction_model")
+    rxn = ec_model.reactions.PUACGAMtrNo1
+    model.add_reaction(rxn)
+    assert len(model.reactions) == 1
+    assert len(model.metabolites) == 2
+    assert {prot.id for prot in model.proteins} == {"prot_P75905", "prot_P69432"}
