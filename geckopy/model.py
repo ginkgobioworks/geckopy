@@ -106,7 +106,12 @@ class Model(cobra.Model):
 
     def get_total_measured_proteins(self) -> float:
         """Sum of all `Proteins` in the model that has a concentration."""
-        measured = sum(prot.concentration for prot in self.proteins)
+        measured = sum(
+            prot.concentration
+            for prot in self.proteins
+            # nan + number = nan!
+            if not isnan(prot.concentration) and prot.concentration
+        )
         return 0 if isnan(measured) or not measured else measured
 
     def constrain_pool(
