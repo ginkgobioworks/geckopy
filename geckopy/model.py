@@ -19,7 +19,7 @@ from collections import defaultdict
 from copy import copy, deepcopy
 from functools import partial
 from math import isnan
-from typing import Dict, Iterator, Optional, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 import cobra
 import pandas as pd
@@ -115,7 +115,11 @@ class Model(cobra.Model):
         return 0 if isnan(measured) or not measured else measured
 
     def constrain_pool(
-        self, p_total, sigma_saturation_factor, fn_mass_fraction_unmeasured_matched
+        self,
+        p_total: float,
+        sigma_saturation_factor: float,
+        fn_mass_fraction_unmeasured_matched: float,
+        protein_list: List[str] = None,
     ):
         """Constrain the draw reactions for the unmeasured (common protein pool) proteins.
 
@@ -137,10 +141,18 @@ class Model(cobra.Model):
             TODO: add convenience function to handle this
             sum of the product of average abundances of unmesured proteins
             (from, e.g., paxDB) times their molecular weight.
+        protein_list: List[str]
+            list of ids of proteins to constrain. This is useful for inspecting
+            the protein utilization of, e.g., a heterologous pathway.
         """
+        proteins = (
+            [self.proteins.get_by_id(prot_id) for prot_id in protein_list]
+            if protein_list
+            else self.proteins
+        )
         unmeasured_prots = [
             prot
-            for prot in self.proteins
+            for prot in proteins
             if prot.concentration and ~isnan(prot.concentration)
         ]
         if not unmeasured_prots:
@@ -148,7 +160,7 @@ class Model(cobra.Model):
         self.add_pool()
         # if there are no proteins measured, the calculations are simplified
         fs_matched_adjusted = p_total * sigma_saturation_factor
-        if len(unmeasured_prots) != len(self.proteins):
+        if len(unmeasured_prots) != len(proteins):
             p_measured = self.get_total_measured_proteins()
             # * section 2.5.1
             # 1. and 2. introduce `prot_pool` and exchange reaction done in __init__
@@ -163,7 +175,7 @@ class Model(cobra.Model):
             )
         self.protein_pool_exchange.bounds = 0, fs_matched_adjusted
 
-        m_weigths = [prot.mw for prot in self.proteins if prot.mw]
+        m_weigths = [prot.mw for prot in proteins if prot.mw]
         average_mmw = sum(m_weigths) / len(m_weigths) / 1000.0
         for protein in unmeasured_prots:
             mmw = protein.mw / 1000 if protein.mw else average_mmw
