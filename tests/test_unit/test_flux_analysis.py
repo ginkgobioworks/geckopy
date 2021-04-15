@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test specialized flux analysis methods.
-
+"""Test specialized flux analysis methods.  
 This tests are for GLPK and they are not consistent with CPLEX and gurobi.
 However, CPLEX and gurobi are both consistent in the same solution.
 """
-from geckopy import flux_variability_analysis
+from geckopy.flux_analysis import (
+    flux_variability_analysis,
+    get_protein_bottlenecks,
+    get_protein_usage_by_reaction_rate,
+    rate_kcat_concentration,
+)
 
 
 def test_fva_with_fixed_reactions(ec_model, fva_targets):
@@ -41,3 +45,32 @@ def test_fva(ec_model, fva_targets):
         ],
     )
     assert ((df.maximum - df.minimum) > 1e-3).sum() == 21
+
+
+def test_usage_x_reaction_rate_is_consistent(ec_model):
+    """Check that the protein usage of top proteins increases with Glc uptake."""
+    fluxes = get_protein_usage_by_reaction_rate(
+        ec_model, "EX_glc__D_e", [-0.1, -1.0, -5.0], "Glc uptake"
+    )
+    assert (
+        fluxes.loc[fluxes["Glc uptake"] == -0.1, "fluxes"].sum()
+        < fluxes.loc[fluxes["Glc uptake"] == -1.0, "fluxes"].sum()
+        < fluxes.loc[fluxes["Glc uptake"] == -5.0, "fluxes"].sum()
+    )
+
+
+def test_expected_bottleneck(ec_model):
+    """Check that the protein usage of top proteins increases with Glc uptake."""
+    for prot in ec_model.proteins:
+        prot.mw = 33000
+    ec_model.constrain_pool(0.00448, 0.65, 1)
+    bottlenecks = get_protein_bottlenecks(ec_model, 10)
+    assert (bottlenecks.protein == "prot_P0A825").any()
+
+
+def test_kcat_concentration_rate(ec_model):
+    """Check that the protein usage of top proteins increases with Glc uptake."""
+    kcat_x_flux = rate_kcat_concentration(
+        ec_model, "prot_P0A825", "THRANo1", [10, 100, 300, 639]
+    )
+    assert kcat_x_flux[0][1] < kcat_x_flux[1][1] < kcat_x_flux[2][1]

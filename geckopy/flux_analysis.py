@@ -35,6 +35,9 @@ REV_PATTERN = re.compile(r"(No\d)|$")
 UNREV_PATTERN = re.compile(r"(.+)_REV(No\d)?")
 __all__ = [
     "flux_variability_analysis",
+    "get_protein_bottlenecks",
+    "get_protein_usage_by_reaction_rate",
+    "rate_kcat_concentration",
 ]
 
 
@@ -164,7 +167,7 @@ def flux_variability_analysis(
 
     Additionally, just the combined reaction `arm_` is reported for isozymes.
 
-    Parametes
+    Parameters
     ----------
     model: geckopy.Model
     fixed_reactions: Optional[List[str]]
@@ -242,3 +245,98 @@ def flux_variability_analysis(
             fva_result.at[rxn_id, :] = lb, ub
 
     return fva_result
+
+
+def annotate_protein_genes(sr: pd.Series, model: Model):
+    """Build a series of genes mapping to a list of proteins."""
+    return sr.apply(
+        lambda x: ",".join(
+            [
+                ",".join([gene.id for gene in reac.genes])
+                for reac in model.proteins.get_by_id(x).reactions
+            ]
+        )
+    )
+
+
+def get_protein_bottlenecks(model: Model, top: int = 10):
+    """Return `top` protein bottlenecks based on the shadow prices."""
+    _, prots = model.optimize()
+    df = prots.to_frame().sort_values("reduced_costs", ascending=False).head(top)
+    df = df.reset_index().rename({"index": "protein"}, axis=1)
+    df["gene"] = annotate_protein_genes(df.protein, model)
+    return df
+
+
+def get_protein_usage_by_reaction_rate(
+    model: Model,
+    reaction: str,
+    fix_fluxes: List[float],
+    reaction_plot_name: str = "Reaction rate",
+    top: int = 10,
+):
+    """Return the top used proteins for each reaction rate.
+
+    Parameters
+    ----------
+    model: geckopy.Model
+    reaction: str
+        id of the reaction whose flux will be fixed to each `fix_fluxes`.
+    fix_fluxes: list[float]
+        the model will be optimized by sequentally fixing the reaction bounds
+        to these fluxes.
+    top: int
+        number of top proteins to return for each condition
+
+    Return
+    ------
+    pandas.DataFrame
+
+    Example
+    -------
+    We can make a bar plot with a slider for each uptake rate using
+    `plotly express <https://plotly.com/python/plotly-express/>`_:
+
+    .. doctest::
+
+        >>> import plotly.express as px
+        >>> model.constrain_pool(0.448, 0.65, 0.8)
+        >>> fluxes = geckopy.flux_analysis.get_protein_usage_by_reaction_rate(
+                model, "EX_glc__D_e", [-0.1, -0.2, -0.5, -1.0, -5.0, -10.0], "Glc uptake"
+            )
+        >>> # return percentages of the total protein pool
+        >>> fluxes.fluxes *= 100 / 0.448
+        >>> px.bar(
+                fluxes, x="protein", y="fluxes", hover_data="gene", color="fluxes",
+                animation_frame="Glc uptake",
+                color_continuous_scale="TealGrn", template="simple_white"
+            )
+    """
+    results = []
+    for flux in fix_fluxes:
+        with model:
+            model.reactions.get_by_id(reaction).bounds = (flux, flux)
+            prot_usage = model.optimize()[1].to_frame()
+            prot_usage[reaction_plot_name] = flux
+            prot_usage = prot_usage.reset_index().rename({"index": "protein"}, axis=1)
+            results.append(prot_usage)
+    proteins = pd.concat(results).reset_index(drop=True)
+    to_plot = proteins.groupby(reaction_plot_name).apply(
+        lambda x: x.sort_values("fluxes", ascending=False).head(top)
+    ).reset_index(drop=True)
+    to_plot["gene"] = annotate_protein_genes(to_plot.protein, model)
+    return to_plot.sort_values([reaction_plot_name, "fluxes"], ascending=False)
+
+
+def rate_kcat_concentration(
+    model: Model, protein: str, reaction: str, kcat_range: List[float]
+):
+    """Calculate the flux value for each kcat in `kcat_range`."""
+    ec_model = model.copy()
+    prot = ec_model.proteins.get_by_id(protein)
+
+    def optimize_with_kcat(kcat):
+        prot.kcats[reaction] = kcat
+        return ec_model.slim_optimize()
+
+    return [(optimize_with_kcat(kcat), kcat) for kcat in kcat_range]

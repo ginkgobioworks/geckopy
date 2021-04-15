@@ -120,3 +120,17 @@ def fva_targets() -> List[str]:
         "CBMKrNo1",
         "EX_glc__D_e",
     ]
+
+
+@pytest.fixture(scope="session")
+def protein_list() -> List[str]:
+    """Proteins to constrain as a pool set."""
+    return [
+        "prot_P45578",
+        "prot_P45578",
+        "prot_P0A796",
+        "prot_P06999",
+        "prot_P23721",
+        "prot_P15254",
+        "prot_P0A9B2",
+    ]
