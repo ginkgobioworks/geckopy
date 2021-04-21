@@ -14,6 +14,7 @@
 
 """Test main functionality."""
 import os
+import sys
 
 import pytest
 import pytfa
@@ -21,14 +22,15 @@ from pytfa.io import load_thermoDB
 
 from geckopy.integration.pytfa import (
     adapt_gecko_to_thermo,
+    get_thermo_coverage,
     translate_model_mnx_to_seed,
     write_thermodb,
 )
 
 
 # these tests are unbearably slow without CPLEX
-_cplex = pytest.importorskip(
-    "cplex", reason="Avoid pytfa tests if CPLEX is not installed"
+hascplex = pytest.mark.skipif(
+    "cplex" not in sys.modules, reason="Avoid pytfa tests if CPLEX is not installed"
 )
 
 
@@ -38,9 +40,10 @@ def test_integrated_model_works(ec_model, thermodb, mnx, compartment_data):
     compartment_data = pytfa.io.read_compartment_data(compartment_data)
     translate_model_mnx_to_seed(ec_model, thermodb, mnx)
     tmodel = adapt_gecko_to_thermo(ec_model, thermodb, compartment_data)
-    assert tmodel.slim_optimize() > 1e-2
+    assert get_thermo_coverage(tmodel) == 585
 
 
+@hascplex
 def test_thermo_constrain_solution(ec_model, thermodb, compartment_data, mnx):
     """Check thermo model returns different solution that normal model."""
     sol = ec_model.optimize()[0]
@@ -54,6 +57,7 @@ def test_thermo_constrain_solution(ec_model, thermodb, compartment_data, mnx):
     assert pytest.approx(tsummed_sol) != pytest.approx(summed_sol)
 
 
+@hascplex
 def test_thermo_with_protein_constrain(ec_model, thermodb, compartment_data, mnx):
     """Check thermo model returns different solution that normal model."""
     thermodb = load_thermoDB(thermodb)

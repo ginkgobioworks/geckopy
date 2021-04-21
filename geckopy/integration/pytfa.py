@@ -136,3 +136,26 @@ def write_thermodb(thermodb: Dict, filename: str):
     """Deserialize the `thermoDB` to a compressed file at `filename`."""
     with open(filename, "wb") as f:
         f.write(zlib.compress(pickle.dumps(thermodb)))
+
+
+def get_thermo_coverage(model: pytfa.thermo.ThermoModel, total=True):
+    """Return the number of reactions that were assigned a thermodynamic variable.
+
+    Parameters
+    ----------
+    model: pytfa.ThermoModel
+    total: bool
+        whether to report the total number of reactions covered or the percentage.
+        Default: True
+    """
+    thermo_set = get_thermo_reactions(model)
+    return len(thermo_set) if total else len(thermo_set) / len(model.reactions)
+
+
+def get_thermo_reactions(model: pytfa.thermo.ThermoModel):
+    r"""Return the set of reactions that were assigned a thermodynamic variable.
+
+    In pytfa, a reaction will have thermodynamic constraints if and only if all
+    of the metabolites in the reaction have the :math:`\Delta G_f`.
+    """
+    return {reac for reac in model.reactions if reac.thermo["computed"]}
