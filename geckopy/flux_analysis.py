@@ -321,9 +321,11 @@ def get_protein_usage_by_reaction_rate(
             prot_usage = prot_usage.reset_index().rename({"index": "protein"}, axis=1)
             results.append(prot_usage)
     proteins = pd.concat(results).reset_index(drop=True)
-    to_plot = proteins.groupby(reaction_plot_name).apply(
-        lambda x: x.sort_values("fluxes", ascending=False).head(top)
-    ).reset_index(drop=True)
+    to_plot = (
+        proteins.groupby(reaction_plot_name)
+        .apply(lambda x: x.sort_values("fluxes", ascending=False).head(top))
+        .reset_index(drop=True)
+    )
     to_plot["gene"] = annotate_protein_genes(to_plot.protein, model)
     return to_plot.sort_values([reaction_plot_name, "fluxes"], ascending=False)
 
