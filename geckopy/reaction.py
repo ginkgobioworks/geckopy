@@ -49,13 +49,13 @@ class Reaction(cobra.Reaction):
         concentration: float
         name: str
         """
-        name = name if name is not None else id
-        prot = Protein(id, kcat, name=name)
+        prot_id = str(id)
+        name = name if name is not None else prot_id
+        prot = Protein(prot_id, name=name)
         coefficient = -1 / (kcat * 3600)
         prot.add_concentration(concentration)
-        _id_to_metabolites = dict([(x.id, x) for x in self._metabolites])
+        _id_to_metabolites = {x.id: x for x in self._metabolites}
 
-        prot_id = str(prot.id)
         if prot_id in _id_to_metabolites:
             self._metabolites[_id_to_metabolites[prot_id]] = coefficient
         else:
@@ -78,13 +78,12 @@ class Reaction(cobra.Reaction):
 
             # the protein is added to both sides of the reaction in case the
             # latter is reversible (it has to be consumed in both cases)
-            for metabolite, coefficient in self._metabolites.items():
-                model.constraints[metabolite.id].set_linear_coefficients(
-                    {
-                        self.forward_variable: coefficient,
-                        self.reverse_variable: coefficient,
-                    }
-                )
+            model.constraints[prot.id].set_linear_coefficients(
+                {
+                    self.forward_variable: coefficient,
+                    self.reverse_variable: coefficient,
+                }
+            )
         # context = get_context(self)
         # if context and reversibly:
         #     if combine:
