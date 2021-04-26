@@ -904,7 +904,7 @@ def write_sbml_ec_model(
         specie.setCompartment(metabolite.compartment)
         s_fbc: libsbml.FbcSpeciesPlugin = specie.getPlugin("fbc")
         if metabolite.charge is not None:
-            s_fbc.setCharge(metabolite.charge)
+            s_fbc.setCharge(int(metabolite.charge))
         if metabolite.formula is not None:
             s_fbc.setChemicalFormula(metabolite.formula)
 
@@ -929,7 +929,7 @@ def write_sbml_ec_model(
             specie.setInitialAmount(metabolite.concentration)
         s_fbc: libsbml.FbcSpeciesPlugin = specie.getPlugin("fbc")
         if metabolite.charge is not None:
-            s_fbc.setCharge(metabolite.charge)
+            s_fbc.setCharge(int(metabolite.charge))
         if metabolite.formula is not None:
             s_fbc.setChemicalFormula(metabolite.formula)
 
