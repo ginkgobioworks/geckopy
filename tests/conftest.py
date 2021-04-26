@@ -32,10 +32,22 @@ def path_eciML1515():
     return join(dirname(__file__), "data", "eciML1515.xml.gz")
 
 
+@pytest.fixture(scope="session")
+def path_ecoli_core():
+    """Store path to model."""
+    return join(dirname(__file__), "data", "ec_coli_core.xml")
+
+
 @pytest.fixture(scope="function")
 def ec_model(path_eciML1515):
     """Load from cobrapy."""
     return geckopy.io.read_sbml_ec_model(path_eciML1515)
+
+
+@pytest.fixture(scope="function")
+def ec_model_core(path_ecoli_core):
+    """Load from cobrapy."""
+    return geckopy.io.read_sbml_ec_model(path_ecoli_core, hardcoded_rev_reactions=False)
 
 
 @pytest.fixture(scope="function")
@@ -56,6 +68,14 @@ def dummy_ec_model():
 def slim_solution(path_eciML1515):
     """Provide the objective value of the enzyme constrained model."""
     return geckopy.io.read_sbml_ec_model(path_eciML1515).slim_optimize()
+
+
+@pytest.fixture(scope="session")
+def slim_solution_core(path_ecoli_core):
+    """Provide the objective value of the enzyme constrained model."""
+    return geckopy.io.read_sbml_ec_model(
+        path_ecoli_core, hardcoded_rev_reactions=False
+    ).slim_optimize()
 
 
 @pytest.fixture(scope="session")
@@ -126,11 +146,6 @@ def fva_targets() -> List[str]:
 def protein_list() -> List[str]:
     """Proteins to constrain as a pool set."""
     return [
-        "prot_P45578",
-        "prot_P45578",
-        "prot_P0A796",
-        "prot_P06999",
-        "prot_P23721",
-        "prot_P15254",
+        "prot_P21599",
         "prot_P0A9B2",
     ]

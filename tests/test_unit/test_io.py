@@ -20,18 +20,18 @@ import pytest
 import geckopy
 
 
-def test_read_geckopy_from_file(path_eciML1515):
+def test_read_geckopy_from_file(path_ecoli_core):
     """Read model directly from file."""
-    model = geckopy.io.read_sbml_ec_model(path_eciML1515)
-    assert len(model.proteins) == 1259
+    model = geckopy.io.read_sbml_ec_model(path_ecoli_core)
+    assert len(model.proteins) == 55
 
 
-def test_copy_geckopy(ec_model):
+def test_copy_geckopy(ec_model_core):
     """Check that deepcopy works."""
-    copied = ec_model.copy()
-    assert len(copied.proteins) == len(ec_model.proteins)
-    assert len(copied.reactions) == len(ec_model.reactions)
-    assert len(copied.metabolites) == len(ec_model.metabolites)
+    copied = ec_model_core.copy()
+    assert len(copied.proteins) == len(ec_model_core.proteins)
+    assert len(copied.reactions) == len(ec_model_core.reactions)
+    assert len(copied.metabolites) == len(ec_model_core.metabolites)
 
 
 def test_parsing_captures_naming_convention(dummy_ec_model):
@@ -55,11 +55,15 @@ def test_protein_parsing_does_not_get_normal_metabolites(dummy_ec_model):
     assert mets ^ prots == mets | prots
 
 
-def test_serialized_model_grows(slim_solution, ec_model):
+def test_serialized_model_grows(slim_solution_core, ec_model_core):
     """Check that concentrations are properly saved on SBML serialization."""
-    geckopy.io.write_sbml_ec_model(ec_model, "_tmpfull.xml")
-    redeserialized = geckopy.io.read_sbml_ec_model("_tmpfull.xml")
-    assert pytest.approx(redeserialized.slim_optimize()) == pytest.approx(slim_solution)
+    geckopy.io.write_sbml_ec_model(ec_model_core, "_tmpfull.xml")
+    redeserialized = geckopy.io.read_sbml_ec_model(
+        "_tmpfull.xml", hardcoded_rev_reactions=False
+    )
+    assert pytest.approx(redeserialized.slim_optimize()) == pytest.approx(
+        slim_solution_core
+    )
     os.remove("_tmpfull.xml")
 
 
@@ -67,6 +71,8 @@ def test_serialized_model_has_concentrations(dummy_ec_model):
     """Check that concentrations are properly saved on SBML serialization."""
     dummy_ec_model.proteins.prot_P0A825.concentration = 123
     geckopy.io.write_sbml_ec_model(dummy_ec_model, "_tmp.xml")
-    redeserialized = geckopy.io.read_sbml_ec_model("_tmp.xml")
+    redeserialized = geckopy.io.read_sbml_ec_model(
+        "_tmp.xml", hardcoded_rev_reactions=False
+    )
     assert redeserialized.proteins.prot_P0A825.concentration == 123
     os.remove("_tmp.xml")

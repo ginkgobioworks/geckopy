@@ -15,43 +15,43 @@
 """Tests related to `.proteins` API."""
 
 
-def test_all_proteins_are_parsed(ec_model):
+def test_all_proteins_are_parsed(ec_model_core):
     """Test .proteins interface."""
-    assert len(ec_model.proteins) == 1259
+    assert len(ec_model_core.proteins) == 55
 
 
-def test_protein_point_to_reactions(ec_model):
+def test_protein_point_to_reactions(ec_model_core):
     """Test protein.reactions interface."""
     assert (
-        ec_model.reactions.get_by_id("PUACGAMtrNo1")
-        in ec_model.proteins.prot_P75905.reactions
+        ec_model_core.reactions.get_by_id("PDH")
+        in ec_model_core.proteins.prot_P0A9P0.reactions
     )
-    assert len(ec_model.proteins.prot_P75905.reactions) == 3
+    assert len(ec_model_core.proteins.prot_P0A9P0.reactions) == 2
 
 
-def test_reaction_point_to_proteins(ec_model):
+def test_reaction_point_to_proteins(ec_model_core):
     """Test protein.reactions.REAC_ID.proteins interface."""
     assert (
-        ec_model.proteins.get_by_id("prot_P75905")
-        in ec_model.reactions.PUACGAMtrNo1.proteins
+        ec_model_core.proteins.get_by_id("prot_P0A9P0")
+        in ec_model_core.reactions.PDH.proteins
     )
 
 
 def test_protein_pseudoreactions_are_not_model_reactions(ec_model):
-    """Ensure that model.reactions is not polluted with protein pseudorreactions."""
+    """Ensure that reactions of legacy EC model are not prot pseudorreactions."""
     assert not ec_model.reactions.query("prot_P75905_exchange")
 
 
-def test_protein_are_not_model_metabolites(ec_model):
+def test_protein_are_not_model_metabolites(ec_model_core):
     """Ensure that model.metabolites is not polluted with proteins."""
-    assert not ec_model.metabolites.query("prot_P75905")
+    assert not ec_model_core.metabolites.query("prot_P0A9P0")
 
 
-def test_kcats_retrieve_right_coefficients(ec_model):
+def test_kcats_retrieve_right_coefficients(ec_model_core):
     """Test kcat interface."""
-    a_prot = ec_model.proteins.get_by_id("prot_P75905")
-    assert int(a_prot.kcats["PUACGAMtrNo1"]) == int(251997 / 3600)
-    a_prot.kcats["PUACGAMtrNo1"] = 2
-    assert ec_model.reactions.get_by_id("PUACGAMtrNo1").metabolites[a_prot] == -1 / (
+    a_prot = ec_model_core.proteins.get_by_id("prot_P0A9P0")
+    assert int(a_prot.kcats["PDH"]) == int(37.90)
+    a_prot.kcats["PDH"] = 2
+    assert ec_model_core.reactions.get_by_id("PDH").metabolites[a_prot] == -1 / (
         2 * 3600
     )

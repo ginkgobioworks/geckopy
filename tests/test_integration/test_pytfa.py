@@ -34,13 +34,13 @@ hascplex = pytest.mark.skipif(
 )
 
 
-def test_integrated_model_works(ec_model, thermodb, mnx, compartment_data):
+def test_integrated_model_works(ec_model_core, thermodb, mnx, compartment_data):
     """Test building block."""
     thermodb = load_thermoDB(thermodb)
     compartment_data = pytfa.io.read_compartment_data(compartment_data)
-    translate_model_mnx_to_seed(ec_model, thermodb, mnx)
-    tmodel = adapt_gecko_to_thermo(ec_model, thermodb, compartment_data)
-    assert get_thermo_coverage(tmodel) == 585
+    translate_model_mnx_to_seed(ec_model_core, thermodb, mnx)
+    tmodel = adapt_gecko_to_thermo(ec_model_core, thermodb, compartment_data)
+    assert get_thermo_coverage(tmodel) == 19
 
 
 @hascplex

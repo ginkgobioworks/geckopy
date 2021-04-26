@@ -21,42 +21,47 @@ from pytest import approx
 import geckopy
 
 
-def test_constraint_pool_changes_objective_value(slim_solution, ec_model):
+def test_constraint_pool_changes_objective_value(slim_solution_core, ec_model_core):
     """Test .proteins interface."""
     # mw are not included in the model, let's say all of them are 330 Da
-    for prot in ec_model.proteins:
+    for prot in ec_model_core.proteins:
         prot.mw = 330
-    ec_model.constrain_pool(2e-3, 0.8, 1.0)
-    pool_solution = ec_model.slim_optimize()
-    assert approx(slim_solution) != approx(pool_solution)
+    ec_model_core.constrain_pool(2e-4, 0.8, 1.0)
+    pool_solution = ec_model_core.slim_optimize()
+    assert approx(slim_solution_core) != pool_solution
     assert approx(pool_solution) != 0.0 and not isnan(pool_solution)
 
 
-def test_constraint_pool_set_changes_solution(slim_solution, ec_model, protein_list):
+def test_constraint_pool_set_changes_solution(
+    slim_solution_core, ec_model_core, protein_list
+):
     """Test .proteins interface."""
     # mw are not included in the model, let's say all of them are 330 Da
-    for prot in ec_model.proteins:
+    for prot in ec_model_core.proteins:
         prot.mw = 330
-    ec_model.constrain_pool(0.0002, 0.65, 1.0, protein_list=protein_list)
-    pool_solution = ec_model.slim_optimize()
-    assert approx(slim_solution) != approx(pool_solution)
+    ec_model_core.constrain_pool(0.0002, 0.065, 1.0, protein_list=protein_list)
+    pool_solution = ec_model_core.slim_optimize()
+    assert approx(slim_solution_core) != pool_solution
     assert approx(pool_solution) != 0.0 and not isnan(pool_solution)
-    assert len(ec_model.constraints["prot_pool"].variables) == len(protein_list) * 2
+    assert (
+        len(ec_model_core.constraints["prot_pool"].variables)
+        == len(protein_list) * 2 + 2
+    )
 
 
-def test_added_protein_modifies_solution(ec_model, slim_solution):
+def test_added_protein_modifies_solution(ec_model_core, slim_solution_core):
     """Test that adding a protein constrains the solution."""
-    ec_model.reactions.CYTBO3_4ppNo1.add_protein(
+    ec_model_core.reactions.CYTBD.add_protein(
         id="prot_INVNTD", kcat=0.3, concentration=2e-5
     )
-    assert approx(ec_model.slim_optimize()) != approx(slim_solution)
+    assert approx(ec_model_core.slim_optimize()) != slim_solution_core
 
 
-def test_added_reaction_gathers_proteins(ec_model):
+def test_added_reaction_gathers_proteins(ec_model_core):
     """Add a reaction with a protein and check that it is correctly structured."""
     model = geckopy.Model("one_reaction_model")
-    rxn = ec_model.reactions.PUACGAMtrNo1
+    rxn = ec_model_core.reactions.GLUSy
     model.add_reaction(rxn)
     assert len(model.reactions) == 1
-    assert len(model.metabolites) == 2
-    assert {prot.id for prot in model.proteins} == {"prot_P75905", "prot_P69432"}
+    assert len(model.metabolites) == 6
+    assert {prot.id for prot in model.proteins} == {"prot_P09832", "prot_P09831"}
