@@ -76,7 +76,6 @@ class Protein(Object):
         self,
         id: Union[str, Metabolite] = None,
         concentration: float = None,
-        kcat: float = 1.0,
         molecular_weight: float = 0.0,
         name: str = "",
     ):
