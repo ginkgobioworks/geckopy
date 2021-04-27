@@ -30,7 +30,9 @@ __all__ = ["get_uniprot", "parse_mw", "extract_proteins"]
 DEFAULT_PARAMS = {"from": "ACC+ID", "to": "ACC", "format": "txt", "query": ""}
 URL = "https://www.uniprot.org/uploadlists/"
 pat_mw = re.compile(r"\nSQ   SEQUENCE.+  (\d+) MW;")
-pat_prot = re.compile(r"prot_(.+)")
+UNIPROT_PATTERN = re.compile(
+    r"(?:prot_)?([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})"
+)
 
 
 def get_uniprot(query: str) -> str:
@@ -59,12 +61,16 @@ def parse_mw(uniprot_info: str) -> str:
     return pat_mw.findall(uniprot_info)
 
 
-def _get_all_proteins(model: Model) -> Dict:
+def _get_all_proteins(model: Model, key_fn) -> Dict:
     """Generate a set of dict of Uniprot ID: reaction id from a `model`."""
-    return {pat_prot.match(prot.id)[1]: prot.id for prot in model.proteins}
+    return {key_fn(prot): prot.id for prot in model.proteins}
 
 
-def extract_proteins(model, all_proteins: Optional[Dict] = None) -> pd.DataFrame:
+def extract_proteins(
+    model,
+    all_proteins: Optional[Dict] = None,
+    key_fn=lambda x: UNIPROT_PATTERN.match(x.id)[1],
+) -> pd.DataFrame:
     """Generate the dataframe protein reactions IDs, Uniprot IDs and MW.
 
     Parameters
@@ -74,6 +80,9 @@ def extract_proteins(model, all_proteins: Optional[Dict] = None) -> pd.DataFrame
         dict of UNIPROT IDs to protein reaction identifiers as in the model.
         If None are supplied, the function will try to identify them with a
         simple regex.
+    key_fn: function
+        mapping to extract the uniprot id from the protein. Default: regex
+        matching on the protein id.
 
     Returns
     -------
@@ -81,7 +90,7 @@ def extract_proteins(model, all_proteins: Optional[Dict] = None) -> pd.DataFrame
 
     """
     if all_proteins is None:
-        all_proteins = _get_all_proteins(model)
+        all_proteins = _get_all_proteins(model, key_fn)
     if not all_proteins:
         raise Exception("Set of proteins exchanges couldn't be resolved.")
     df = pd.DataFrame(
