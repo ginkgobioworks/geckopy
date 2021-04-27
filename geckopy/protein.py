@@ -82,7 +82,6 @@ class Protein(Object):
         """Initialize with id."""
         self.concentration = concentration
         self.mw = molecular_weight
-        self.name = name
         self._flux = None
         self.lower_bound = 0
         self._reaction = set()
@@ -93,18 +92,29 @@ class Protein(Object):
         if isinstance(id, Metabolite):
             self.from_metabolite(id)
         else:
-            self.id = id
+            Object.__init__(self, id, name)
             self.formula = ""
             self.charge = 0.0
         self.kcats = Kcats(self)
+
+    def _set_id_with_model(self, value):
+        """Overwrite parent id setter to change constraints and variables."""
+        if value in self.model.proteins:
+            raise ValueError(f"This model already constains a protein '{value}'")
+        forward_variable = self.forward_variable
+        reverse_variable = self.reverse_variable
+        self.model.constraints[self.id].name = value
+        self._id = value
+        self.model.proteins._generate_index()
+        forward_variable.name = self.id
+        reverse_variable.name = self.reverse_id
 
     def from_metabolite(self, met: Metabolite):
         """Initialize `Protein` from `Metabolite`; i.e., when reading from SBML."""
         if not UNIPROT_PATTERN.match(met.id):
             LOGGER.warning(f"Metabolite {met.id} does not use Uniprot ID.")
-        self.id = met.id
+        Object.__init__(self, met.id, met.name)
         self.compartment = met.compartment
-        self.name = met.name
         self._reaction = met._reaction
         self.charge = met.charge
         self.formula = ""
