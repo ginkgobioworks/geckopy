@@ -15,17 +15,16 @@
 """Ensure that geckopy is consistent with cobrapy."""
 
 import pandas as pd
-import pytest
+from pytest import approx
 
 import geckopy
 
 
 def test_unconstrained_ec_model_is_cobra_model(slim_solution, cobra_model):
     """Check that unconstrained ec_model returns the same maximum as the plain model."""
-    assert round(cobra_model.slim_optimize(), 4) == round(slim_solution, 4)
+    assert approx(cobra_model.slim_optimize()) == slim_solution
 
 
-@pytest.mark.xfail(reason="Loading cobrapy is not implemented")
 def test_constrained_ec_model_is_not_cobra_model(cobra_model, experimental_copy_number):
     """Check that constrained ec_model returns different maximum than the plain model."""
     raw_proteomics = pd.read_csv(experimental_copy_number)
@@ -38,11 +37,5 @@ def test_constrained_ec_model_is_not_cobra_model(cobra_model, experimental_copy_
         dens=1.105e-12,
         water=0.3,
     )
-    assert round(cobra_model.slim_optimize(), 4) != round(ec_model.slim_optimize(), 4)
-
-
-@pytest.mark.xfail(reason="Loading cobrapy is not implemented")
-def test_from_cobrapy_works(cobra_model):
-    """Generate ec_gem from cobrapy_model."""
-    ec_model = geckopy.Model(cobra_model)
+    assert approx(cobra_model.slim_optimize()) != ec_model.slim_optimize()
     assert len(ec_model.proteins) == 1259

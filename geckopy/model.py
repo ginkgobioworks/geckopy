@@ -80,27 +80,33 @@ class Model(cobra.Model):
         if isinstance(id_or_model, cobra.Model) and not hasattr(
             id_or_model, "proteins"
         ):
-            super().__init__(id_or_model.id, name)
-            self.from_cobra(id_or_model)
+            self.from_cobra(id_or_model, name)
         else:
             super().__init__(id_or_model, name)
 
-    def from_cobra(self, model):
-        """Create from cobra model."""
+    def from_cobra(self, model: cobra.Model, name: str):
+        """Initialize from cobra model."""
+        # gather prots from by naming convention
+        super().__init__(model.id, name)
         g_proteins = [met for met in model.metabolites if met.id.startswith("prot_")]
-        # groups
+        # gather prots from by SBML group
         if model.groups.query("Protein"):
             g_proteins += model.groups.Protein.members
         g_proteins = set(g_proteins)
-        g_prot_id = {prot.id for prot in g_proteins}
-        self._solver = model.solver
-        self.add_proteins([Protein(prot) for prot in g_proteins])
+        model.remove_metabolites(g_proteins)
         self.add_metabolites(
-            [met for met in model.metabolites if met.id not in g_prot_id]
+            [met for met in model.metabolites if met not in g_proteins]
         )
         self.add_reactions(
             [reac for reac in model.reactions if not reac.id.startswith("prot_")]
         )
+        self.add_proteins([Protein(prot) for prot in g_proteins])
+        # point every previous protein Metabolite to an actual Protein object
+        for reac in self.reactions:
+            reac._metabolites = {
+                met if met not in g_proteins else self.proteins.get_by_id(met.id): val
+                for met, val in reac.metabolites.items()
+            }
         self.__setstate__(self.__dict__)
         self._populate_solver(self.reactions, self.metabolites, self.proteins)
 
