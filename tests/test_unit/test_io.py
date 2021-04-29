@@ -16,6 +16,7 @@
 import os
 
 import pytest
+from pytest import approx
 
 import geckopy
 
@@ -76,3 +77,15 @@ def test_serialized_model_has_concentrations(dummy_ec_model):
     )
     assert redeserialized.proteins.prot_P0A825.concentration == 123
     os.remove("_tmp.xml")
+
+
+def test_hardcoding_rev_reactions(ec_model_core, slim_solution_core):
+    """Check that hardcoding rev reactions (like legacy model) grows."""
+    geckopy.io.write_sbml_ec_model(
+        ec_model_core, "_tmp_hardcoded.xml", hardcode_rev_reactions=True
+    )
+    redeserialized = geckopy.io.read_sbml_ec_model(
+        "_tmp_hardcoded.xml", hardcoded_rev_reactions=True
+    )
+    assert approx(slim_solution_core) == redeserialized.slim_optimize()
+    os.remove("_tmp_hardcoded.xml")

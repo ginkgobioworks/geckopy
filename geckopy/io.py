@@ -85,6 +85,7 @@ PROT_PATTERN = re.compile(
 PROT_EX_PATTERN = re.compile(
     r"prot_[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}_exchange"
 )
+REV_PATTERN = re.compile(r"(No\d)|$")
 
 
 def read_sbml_ec_model(
@@ -754,8 +755,50 @@ def read_sbml_ec_model(
     return geckopy_model
 
 
+def _add_reverse_protein_reactions(model: Model) -> Model:
+    """Add a reversed reaction for each reaction containing a protein.
+
+    This is important to keep backwards compatibility with legacy EC models and
+    the MATLAB toolbox, whereas geckopy is capable of handling protein
+    consumption as a reactant in both directions without adding new reactions.
+
+    The identifier follows the convention of legacy models:
+    - HEX -> HEX_REV
+    - HEXNo1 -> HEX_REVNo1
+    """
+    model_copy = model.copy()
+    rev_reacs = []
+    for reac in model_copy.reactions:
+        if reac.proteins:
+            rev_id = REV_PATTERN.sub(r"_REV\1", reac.id, count=1)
+            if rev_id in model_copy.reactions:
+                # assume that the naming convention is always reserved for this case
+                continue
+            reaction = Reaction(rev_id)
+            # reverse the reaction but keep protein as reactant
+            reaction.add_metabolites(
+                {
+                    met: -coeff if met not in model.proteins else coeff
+                    for met, coeff in reac.metabolites.items()
+                }
+            )
+            # split the bounds
+            reaction.bounds = 0, -reac.lower_bound
+            reac.bounds = 0, reac.upper_bound
+            rev_reacs.append(reaction)
+    model_copy.add_reactions(rev_reacs)
+    LOGGER.debug(
+        f"{len(rev_reacs)} reverse reactions added to written model '{model_copy.id}'."
+    )
+    return model_copy
+
+
 def write_sbml_ec_model(
-    ec_model: Model, filename: str, f_replace=F_REPLACE, units=True
+    ec_model: Model,
+    filename: str,
+    f_replace=F_REPLACE,
+    units=True,
+    hardcode_rev_reactions: bool = False,
 ):
     """Write cobra model to filename.
 
@@ -784,8 +827,14 @@ def write_sbml_ec_model(
     filename : string
         path to which the model is written
     f_replace: dict of replacement functions for id replacement
+    hardcode_rev_reactions: bool
+        whether to split reactions with proteins into two, both consuming the
+        corresponding enzyme as a reactant (as in legacy models). Default: False
     """
     cobra_model = ec_model
+    if hardcode_rev_reactions:
+        cobra_model = _add_reverse_protein_reactions(cobra_model)
+
     if f_replace is None:
         f_replace = {}
 
