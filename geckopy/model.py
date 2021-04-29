@@ -559,5 +559,5 @@ class Model(cobra.Model):
 
         Enzyme constraint changes: return an geckopy.Reaction.
         """
-        rxn = super().__init__(metabolite, type, reaction_id, lb, ub, sbo_term)
+        rxn = super().add_boundary(metabolite, type, reaction_id, lb, ub, sbo_term)
         return Reaction(rxn)
