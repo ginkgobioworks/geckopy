@@ -14,7 +14,6 @@
 
 """Test main functionality."""
 import os
-import sys
 
 import pytest
 import pytfa
@@ -28,12 +27,6 @@ from geckopy.integration.pytfa import (
 )
 
 
-# these tests are unbearably slow without CPLEX
-hascplex = pytest.mark.skipif(
-    "cplex" not in sys.modules, reason="Avoid pytfa tests if CPLEX is not installed"
-)
-
-
 def test_integrated_model_works(ec_model_core, thermodb, mnx, compartment_data):
     """Test building block."""
     thermodb = load_thermoDB(thermodb)
@@ -43,32 +36,30 @@ def test_integrated_model_works(ec_model_core, thermodb, mnx, compartment_data):
     assert get_thermo_coverage(tmodel) == 19
 
 
-@hascplex
-def test_thermo_constrain_solution(ec_model, thermodb, compartment_data, mnx):
+def test_thermo_constrain_solution(ec_model_core, thermodb, compartment_data, mnx):
     """Check thermo model returns different solution that normal model."""
-    sol = ec_model.optimize()[0]
+    sol = ec_model_core.optimize()[0]
     summed_sol = sol.fluxes.sum()
     thermodb = load_thermoDB(thermodb)
     compartment_data = pytfa.io.read_compartment_data(compartment_data)
-    translate_model_mnx_to_seed(ec_model, thermodb, mnx)
-    tmodel = adapt_gecko_to_thermo(ec_model, thermodb, compartment_data)
+    translate_model_mnx_to_seed(ec_model_core, thermodb, mnx)
+    tmodel = adapt_gecko_to_thermo(ec_model_core, thermodb, compartment_data)
     tsol = tmodel.optimize()
     tsummed_sol = tsol.fluxes.sum()
-    assert pytest.approx(tsummed_sol) != pytest.approx(summed_sol)
+    assert pytest.approx(tsummed_sol) != summed_sol
 
 
-@hascplex
-def test_thermo_with_protein_constrain(ec_model, thermodb, compartment_data, mnx):
+def test_thermo_with_protein_constrain(ec_model_core, thermodb, compartment_data, mnx):
     """Check thermo model returns different solution that normal model."""
     thermodb = load_thermoDB(thermodb)
     compartment_data = pytfa.io.read_compartment_data(compartment_data)
-    translate_model_mnx_to_seed(ec_model, thermodb, mnx)
-    tmodel = adapt_gecko_to_thermo(ec_model, thermodb, compartment_data)
+    translate_model_mnx_to_seed(ec_model_core, thermodb, mnx)
+    tmodel = adapt_gecko_to_thermo(ec_model_core, thermodb, compartment_data)
     tsol = tmodel.slim_optimize()
-    ec_model.proteins.prot_P0AEN1.add_concentration(2e-4)
-    tmodel = adapt_gecko_to_thermo(ec_model, thermodb, compartment_data)
+    ec_model_core.proteins.prot_P25516.add_concentration(2e-4)
+    tmodel = adapt_gecko_to_thermo(ec_model_core, thermodb, compartment_data)
     tsol_ec_constrained = tmodel.slim_optimize()
-    assert pytest.approx(tsol) != pytest.approx(tsol_ec_constrained)
+    assert pytest.approx(tsol) != tsol_ec_constrained
 
 
 def test_write_thermodb(thermodb):
