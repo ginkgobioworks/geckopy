@@ -59,7 +59,7 @@ def from_mmol_gDW(
     model: cobra.Model, processed_proteomics: pd.DataFrame
 ) -> cobra.Model:
     """Apply proteomics constraints to model and return the copied EC model."""
-    ec_model = Model(model)
+    ec_model = Model(model.copy())
     limit_proteins(ec_model, processed_proteomics)
     return ec_model
 
