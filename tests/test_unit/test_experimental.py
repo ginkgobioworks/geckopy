@@ -66,12 +66,12 @@ def test_relaxed_ec_model_from_copy_number_can_grow(
         water=0.3,
     )
     sol = ec_model.slim_optimize()
-    sol = sol if not isnan(sol) and sol else 0.
+    sol = sol if not isnan(sol) and sol else 0.0
     ec_model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = 0.8
     iis, _ = get_upper_relaxation(
         ec_model.copy(), [prot.id for prot in ec_model.proteins]
     )
-    ec_model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = 0.
+    ec_model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = 0.0
     final_gr, prots = relax_proteomics_greedy(ec_model, 0.5, protein_set=iis)
     relaxed_sol = ec_model.slim_optimize()
     assert relaxed_sol >= 0.5 and relaxed_sol > sol
@@ -95,7 +95,7 @@ def test_irreductibly_relaxed_ec_model_from_copy_number_can_grow(
     sol = sol if not isnan(sol) and sol else 0.0
     ec_model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = 0.8
     iis = elastic_upper_relaxation(ec_model, [prot.id for prot in ec_model.proteins])
-    ec_model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = 0.
+    ec_model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = 0.0
     final_gr, prots = relax_proteomics_greedy(ec_model, 0.2, protein_set=iis)
     relaxed_sol = ec_model.slim_optimize()
     assert relaxed_sol >= 0.2 and relaxed_sol > sol
