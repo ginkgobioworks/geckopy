@@ -35,6 +35,9 @@ jobs:
         # Lacking swiglpk wheels for this combination.
         - os: macos-latest
           python-version: '3.9'
+        # FVA gets stuck for some reason for this combination
+        - os: macos-latest
+          python-version: '3.8'
 
     steps:
     - uses: actions/checkout@v2
