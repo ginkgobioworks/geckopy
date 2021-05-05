@@ -19,8 +19,11 @@ relaxation methods aim to remove the smallest subset of experimental measurement
 to allow growth.
 """
 
+import logging
+import warnings
+from enum import Enum
 from math import isnan
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import cobra
 import optlang
@@ -35,23 +38,44 @@ __all__ = [
     "apply_proteomics_elastic_relaxation",
     "elastic_upper_relaxation",
     "relax_proteomics_greedy",
+    "get_upper_relaxation",
+    "Objective_rule",
 ]
+LOGGER = logging.getLogger(__name__)
+
+
+class Objective_rule(Enum):
+    r"""Objective to minimize for relaxation.
+
+    - Objective_rule.MIN_ELASTIC_SUM:
+    :math:`\sum_{v \in \text{elastic vars}} v_{flux}` (LP).
+    - Objective_rule.MIN_ELASTIC_SUM_OBJECTIVE:
+    :math:`\sum_{e \in \text{elastic vars}} + \text{prev objective}` (LP).
+    - Objective_rule.MIN_MILP_COUNT:
+    :math:`\sum_i^{N} e_i` where e is a binary variable (MILP).
+    """
+
+    MIN_ELASTIC_SUM = 1
+    MIN_MILP_COUNT = 2
+    MIN_ELASTIC_SUM_OBJECTIVE = 3
 
 
 def apply_proteomics_relaxation(
-    original_model: Model, min_objective=0.0
+    original_model: Model,
+    objective_rule: Objective_rule = Objective_rule.MIN_ELASTIC_SUM_OBJECTIVE,
 ) -> Tuple[Model, Set]:
     """Relax the problem by relaxing the protein concentration constraints.
 
     The relaxed problems will contain elastic variables, returning the model a
-    non-minimal infeashible contraint set.
+    non-unique infeashible contraint set.
 
     Parameters
     ----------
     original_model: geckopy.Model
         Geckopy model. It won't be modified but copied.
-    min_growth: float
-        Minimal current objective value to be reached.
+    objective_rule: Objective_rule
+        The IIS is selected by minimizing an objective as defined in
+        :class:`Objective_rule`.
 
     Returns
     -------
@@ -60,21 +84,23 @@ def apply_proteomics_relaxation(
 
     """
     model = original_model.copy()
-    _, elastics = apply_upper_relaxation(
+    iis, _ = get_upper_relaxation(
         model,
         [
             prot.id
             for prot in model.proteins
             if isinstance(prot.concentration, float) and not isnan(prot.concentration)
         ],
+        objective_rule,
     )
     # second relaxation to generate the model only with the required new
     # variables and with the modified objective
-    return apply_upper_relaxation(model, elastics)
+    return iis, model
 
 
 def apply_proteomics_elastic_relaxation(
-    original_model: Model, min_objective=0.0
+    original_model: Model,
+    objective_rule: Objective_rule = Objective_rule.MIN_ELASTIC_SUM_OBJECTIVE,
 ) -> Tuple[Model, Set]:
     """Relax the problem by relaxing the protein concentration constraints.
 
@@ -87,8 +113,9 @@ def apply_proteomics_elastic_relaxation(
     ----------
     original_model: geckopy.Model
         Geckopy model. It won't be modified but copied.
-    min_growth: float
-        Minimal current objective value to be reached.
+    objective_rule: Objective_rule
+        The IIS is selected by minimizing an objective as defined in
+        :class:`Objective_rule`.
 
     Returns
     -------
@@ -96,6 +123,7 @@ def apply_proteomics_elastic_relaxation(
         copy of the model with the relaxed variables applied and the sets
     """
     model = original_model.copy()
+    # model is inspescted for IIS
     elastics = elastic_upper_relaxation(
         model,
         [
@@ -103,8 +131,11 @@ def apply_proteomics_elastic_relaxation(
             for prot in model.proteins
             if isinstance(prot.concentration, float) and not isnan(prot.concentration)
         ],
+        objective_rule,
     )
-    return apply_upper_relaxation(model, elastics)
+    # model is modified in place given the elastic candidates found
+    iis, _ = get_upper_relaxation(model, elastics, objective_rule)
+    return model, iis
 
 
 def change_constraint(
@@ -124,31 +155,87 @@ def change_constraint(
     model.add(new_cons, sloppy=sloppy)
 
 
+def get_upper_relaxation(
+    model: cobra.Model,
+    candidates: List[str],
+    objective_rule: Objective_rule = Objective_rule.MIN_ELASTIC_SUM_OBJECTIVE,
+) -> Tuple[Set, str]:
+    """Get one IIS of upper bounds of the `candidates`."""
+    objective_vars = []
+    for e_id in candidates:
+        e = model.constraints[e_id]
+        if objective_rule == Objective_rule.MIN_MILP_COUNT:
+            v = model.problem.Variable(f"V_{e_id}", type="binary")
+            vl = model.problem.Variable(f"VL_{e_id}", lb=0, ub=1000)
+            new_expr = e.expression + v * 1000 - vl
+        else:
+            v = model.problem.Variable(f"V_{e_id}", lb=0, ub=1000)
+            new_expr = e.expression + v
+        change_constraint(e, new_expr, model.solver)
+        objective_vars.append(v)
+    if objective_rule == Objective_rule.MIN_ELASTIC_SUM_OBJECTIVE:
+        model.objective = model.problem.Objective(
+            sympy.Add(*(objective_vars + [-model.objective.expression])),
+            direction="min",
+        )
+    else:
+        model.objective = model.problem.Objective(
+            sympy.Add(*(objective_vars)),
+            direction="min",
+        )
+    model.slim_optimize()
+    status = model.solver.status
+    # CPLEX may just error out if a var of an infeasible problem is accessed
+    return {
+        v.name[2:]
+        for v in objective_vars
+        if abs(v.primal) > 0 and v.name.startswith("V_")
+    } if status == "optimal" else set(), status
+
+
 def elastic_upper_relaxation(
-    original_model: cobra.Model, elastic_candidates: List[str]
+    original_model: cobra.Model,
+    elastic_candidates: List[str],
+    objective_rule: Objective_rule = Objective_rule.MIN_ELASTIC_SUM_OBJECTIVE,
 ) -> Set:
     r"""Convert constrains to elastic constraints until the problem is feashible.
 
     It assumes that the elastic candidates are all subject to a <= constraint.
 
     Based on Brown and Graves, 1975:
-    Q <- original problem
-    E <- set of variables, candidates to be relaxes
-    V <- set of variables that relax the problem
-    relax(e_i) <- Add constraitn e - v
-    Z <- \sum_{v_i \in V} v_i
-    IIS <- minimal set of infeashible variables
 
-    1. relax(e_i) for each e_i in E
-    2. min Z, s.t. E, Q, v_i >= 0 for all V
-    3. Get R <- v_i in V > 0
+        - Q <- original problem
+
+        - E <- set of variables, candidates to be relaxed
+
+        - V <- set of variables that relax the problem
+
+        - relax(:math:`e_i`) <- Add constraint :math:`e - v`
+
+        - Z <- :math:`\sum_{v \in V} v`
+
+    IIS <- irreducibly infeashible set of variables
+
+    1. relax(:math:`e_i`) for each :math:`e_i` in :math:`E`
+    2. min :math:`Z`, s.t. :math:`E, Q, v \ge 0 \forall V`
+    3. Get :math:`R = v \in V \lt 0`
     4. If infeashible:
         STOP
     5. Else:
-        5.1. E = E - R
-        5.2. IIS = IIS & R
-        go to 1
+        5.1. :math:`E = E - R`
+
+        5.2. :math:`IIS = IIS \cup R`
+
+        Go to 1
     6. return IIS
+
+    Parameters
+    ----------
+    original_model: cobra.Model
+    elastic_candidates: list[str]
+    objective_rule: Objective_rule
+        The IIS is selected by minimizing an objective as defined in
+        :class:`Objective_rule`.
     """
     status = "optimal"
     current_candidates = set(elastic_candidates)
@@ -156,52 +243,18 @@ def elastic_upper_relaxation(
     n_last_iss = -1
     while status == "optimal" and n_last_iss != len(iss):
         n_last_iss = len(iss)
-        model = original_model.copy()
-        # 5.1
         current_candidates -= iss
-        objective_vars = []
-        # 1.
-        for e_id in current_candidates:
-            e = model.constraints[e_id]
-            v = model.problem.Variable(f"V_{e_id}", lb=0, ub=1000)
-            new_expr = e.expression + v
-            change_constraint(e, new_expr, model.solver)
-            objective_vars.append(v)
-        # 2.
-        model.objective = model.problem.Objective(
-            sympy.Add(*(objective_vars + [-model.objective.expression])),
-            direction="min",
+        n_iss, status = get_upper_relaxation(
+            original_model.copy(), current_candidates, Objective_rule.MIN_MILP_COUNT
         )
-        model.slim_optimize()
-        status = model.solver.status
-        # 5.2.
-        iss |= {
-            # 3.
-            v.name[2:]
-            for v in objective_vars
-            if abs(v.primal) > 0 and v.name.startswith("V_")
-        }
+        # CPLEX may just error out if a var of an infeasible problem is accessed
+        iss |= n_iss
     return iss
 
 
-def apply_upper_relaxation(
-    original_model: cobra.Model, to_relax: List[str]
-) -> Tuple[Model, Set]:
-    """Relax the problem by relaxing `to_relax` upper (x <=) contraints."""
-    model = original_model.copy()
-    objective_vars = []
-    for e_id in to_relax:
-        e = model.constraints[e_id]
-        v = model.problem.Variable(f"V_{e_id}", lb=0, ub=1000)
-        new_expr = e.expression + v
-        change_constraint(e, new_expr, model.solver)
-        objective_vars.append(v)
-    model.objective -= sympy.Add(*objective_vars)
-    model.slim_optimize()
-    return model, {v.name[2:] for v in objective_vars if abs(v.primal) > 0}
-
-
-def top_shadow_prices(solution: cobra.Solution, top: int = 1) -> pd.DataFrame:
+def top_shadow_prices(
+    solution: cobra.Solution, top: int = 1, protein_set: Optional[List[str]] = None
+) -> pd.DataFrame:
     """Rank them from most to least sensitive in the model reactions.
 
     Parameters
@@ -216,12 +269,15 @@ def top_shadow_prices(solution: cobra.Solution, top: int = 1) -> pd.DataFrame:
     shadow_pr: pd.Series
         Top shadow prices, ranked.
     """
+    protein_set = (
+        protein_set if protein_set is not None else solution.shadow_prices.index
+    )
     shadow_pr = solution.shadow_prices
-    return shadow_pr.sort_values()[:top]
+    return shadow_pr[protein_set].sort_values()[:top]
 
 
 def relax_proteomics_greedy(
-    model: Model, minimal_growth: float
+    model: Model, minimal_growth: float, protein_set: Optional[List[str]] = None
 ) -> Tuple[Dict, List[Dict]]:
     """Remove proteomics measurements with a set that enables the model to grow.
 
@@ -237,6 +293,8 @@ def relax_proteomics_greedy(
         The enzyme-constrained model.
     minimal_growth_rate: float
         Minimal growth rate to enforce.
+    protein_set: Optional[List[str]]
+        If a list of ids is provided, the search will be applied to only these proteins.
 
     Returns
     -------
@@ -253,30 +311,32 @@ def relax_proteomics_greedy(
         else 0
     )
 
-    # relax growth constraint
-    minimal_growth *= 1.05
-
     # while the model cannot grow to the desired level, remove the protein with
     # the highest shadow price:
     prots_to_remove = []
-    n_prots_with_concentration = len(
-        [
-            prot
-            for prot in model.proteins
-            if prot.concentration and not isnan(prot.concentration)
-        ]
+    n_prots_with_concentration = (
+        len(
+            [
+                prot
+                for prot in model.proteins
+                if prot.concentration and not isnan(prot.concentration)
+            ]
+        )
+        if protein_set is None
+        else len(protein_set)
     )
     while new_growth_rate < minimal_growth and n_prots_with_concentration > 0:
         # get most influential protein in model:
-        top_protein = top_shadow_prices(prot_solution)
+        top_protein = top_shadow_prices(prot_solution, protein_set=protein_set)
         top_protein = model.proteins.get_by_id(top_protein.index[0])
 
         # update data: append protein to list, remove from current dataframe and
         # increase the corresponding upper bound to +1000:
         prots_to_remove.append(top_protein)
-        print(top_protein.id)
+        LOGGER.debug(f"Removed {top_protein.id} concentration")
         top_protein.add_concentration(None)
-        top_protein.upper_bound = 1000
+        if protein_set:
+            protein_set.remove(top_protein.id)
         n_prots_with_concentration -= 1
 
         # re-compute solution:
@@ -291,9 +351,11 @@ def relax_proteomics_greedy(
 
     # update growth rate if optimization was not successful:
     if new_growth_rate < minimal_growth:
-        print(
-            f"Minimal growth was not reached! "
+        message = (
+            "Minimal growth was not reached! "
             f"Final growth of the model: {new_growth_rate}"
         )
+        LOGGER.warn(message)
+        warnings.warn(message)
 
     return new_growth_rate, prots_to_remove
