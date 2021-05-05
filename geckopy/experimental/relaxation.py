@@ -95,7 +95,7 @@ def apply_proteomics_relaxation(
     )
     # second relaxation to generate the model only with the required new
     # variables and with the modified objective
-    return iis, model
+    return model, iis
 
 
 def apply_proteomics_elastic_relaxation(
@@ -245,7 +245,7 @@ def elastic_upper_relaxation(
         n_last_iss = len(iss)
         current_candidates -= iss
         n_iss, status = get_upper_relaxation(
-            original_model.copy(), current_candidates, Objective_rule.MIN_MILP_COUNT
+            original_model.copy(), current_candidates, objective_rule
         )
         # CPLEX may just error out if a var of an infeasible problem is accessed
         iss |= n_iss
@@ -263,6 +263,8 @@ def top_shadow_prices(
         The usual Solution object returned by model.optimize().
     top: int
         The number of metabolites to be returned.
+    protein_set: Optional[List[str]]
+        If a list of ids is provided, the search will be applied to only these proteins.
 
     Returns
     -------
@@ -341,8 +343,6 @@ def relax_proteomics_greedy(
 
         # re-compute solution:
         solution, prot_solution = model.optimize()
-        # if solution.objective_value == new_growth_rate:  # the algorithm is stuck
-        #    break
         new_growth_rate = (
             solution.objective_value
             if solution.objective_value and not isnan(solution.objective_value)
