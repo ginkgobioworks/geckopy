@@ -46,7 +46,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install .
-        python -m pip install pytfa pytest
+        python -m pip install pytfa "pytest>=6.2"
     - name: Functional test
       run: python -m pytest
     # TODO: setup codecov
