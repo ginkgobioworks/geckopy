@@ -533,16 +533,21 @@ class Model(cobra.Model):
             self, reactions=self.proteins, metabolites=self.proteins
         )
         solution_prot.contributions = solution_prot.fluxes
-        # workaround for wrong shadow prices of proteins
-        try:
-            prot_index = [prot.id for prot in self.proteins]
-            solution_prot.shadow_prices = pd.Series(
-                index=prot_index,
-                data=[self.constraints[prot.id].dual for prot in prot_index],
-                name="shadow_prices",
-            )
-        except Exception:
-            pass
+        if all(solution_prot.shadow_prices == 0):
+            # workaround for wrong shadow prices of proteins
+            try:
+                prot_index = [prot.id for prot in self.proteins]
+                solution_prot.shadow_prices = pd.Series(
+                    index=prot_index,
+                    data=[
+                        -self.variables[prot.id].dual
+                        + self.variables[prot.reverse_id].dual
+                        for prot in prot_index
+                    ],
+                    name="shadow_prices",
+                )
+            except Exception:
+                pass
 
         return solution, solution_prot
 
