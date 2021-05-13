@@ -33,7 +33,7 @@ def test_integrated_model_works(ec_model_core, thermodb, mnx, compartment_data):
     compartment_data = pytfa.io.read_compartment_data(compartment_data)
     translate_model_mnx_to_seed(ec_model_core, thermodb, mnx)
     tmodel = adapt_gecko_to_thermo(ec_model_core, thermodb, compartment_data)
-    assert get_thermo_coverage(tmodel) == 19
+    assert get_thermo_coverage(tmodel) == 74
 
 
 def test_thermo_constrain_solution(ec_model_core, thermodb, compartment_data, mnx):
@@ -56,7 +56,7 @@ def test_thermo_with_protein_constrain(ec_model_core, thermodb, compartment_data
     translate_model_mnx_to_seed(ec_model_core, thermodb, mnx)
     tmodel = adapt_gecko_to_thermo(ec_model_core, thermodb, compartment_data)
     tsol = tmodel.slim_optimize()
-    ec_model_core.proteins.prot_P25516.add_concentration(2e-4)
+    ec_model_core.proteins.prot_P25516.add_concentration(2e-5)
     tmodel = adapt_gecko_to_thermo(ec_model_core, thermodb, compartment_data)
     tsol_ec_constrained = tmodel.slim_optimize()
     assert pytest.approx(tsol) != tsol_ec_constrained
