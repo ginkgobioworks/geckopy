@@ -17,6 +17,7 @@
 import logging
 import pickle
 import zlib
+from functools import reduce
 from typing import Dict, Optional
 
 import cobra
@@ -152,6 +153,54 @@ def adapt_gecko_to_thermo(
     tmodel.convert(verbose=False)
     # tmodel.convert(verbose=False, overwrite_lc_vars=False)
     return tmodel
+
+
+def _prepare_pseudometabolites_dfg(model: geckopy.Model, thermodb: Dict):
+    r"""Equal :math:`\Delta G_f` of pseudometabolites to their opposite sides."""
+    prepared_reactions = 0
+    # reac = cobra.Reaction("EX_revolver")
+    # reac.add_metabolites({cobra.Metabolite("revolver", compartment="c"): -1})
+    # model.add_reaction(reac)
+    # reac.bounds = -1000, 1000
+    for reaction in model.reactions:
+        if reaction.id.startswith("arm_"):
+            real_mets = [
+                thermodb["metabolites"][met.annotation["seed_id"]]
+                for met in reaction.metabolites
+                if "seed_id" in met.annotation and not met.id.startswith("pmet")
+            ]
+            if len(real_mets) == len(reaction.metabolites) - 1:
+                pmet, *_ = [
+                    met for met in reaction.metabolites if met.id.startswith("pmet")
+                ]
+                pmet.annotation["seed_id"] = pmet.id
+                pmet.formula = "".join([met["formula"] for met in real_mets])
+                thermodb["metabolites"][pmet.id] = {
+                    "pKa": [7],
+                    "deltaGf_err": max(met["deltaGf_err"] for met in real_mets),
+                    "mass_std": sum(met["mass_std"] for met in real_mets),
+                    "id": pmet.id,
+                    "nH_std": 12,
+                    "name": pmet.name,
+                    "formula": pmet.formula,
+                    "deltaGf_std": sum(met["deltaGf_std"] for met in real_mets),
+                    "error": "Nil",
+                    "charge_std": -sum(met["charge_std"] for met in real_mets),
+                    "struct_cues": {
+                        k: sum(x["struct_cues"].get(k, 0) for x in real_mets)
+                        for k in reduce(
+                            lambda a, b: a | set(b["struct_cues"]),
+                            real_mets,
+                            set(),
+                        )
+                    },
+                }
+                # reaction.add_metabolites(
+                #     {model.metabolites.get_by_id("revolver"):
+                #      -1 if "REV" in reaction.id else 1}
+                # )
+                prepared_reactions += 1
+    LOGGER.info(f"Succesfully prepared {prepared_reactions} arm reactions")
 
 
 def translate_model_mnx_to_seed(
