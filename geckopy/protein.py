@@ -87,7 +87,7 @@ class Protein(Object):
         self._reaction = set()
         self._ub = config.upper_bound
         self.compartment = "c"
-        self._metabolites = {self: 1}
+        self.__metabolites = {}
         self._annotation = {}
         if isinstance(id, Metabolite):
             self.from_metabolite(id)
@@ -96,6 +96,7 @@ class Protein(Object):
             self.formula = ""
             self.charge = 0.0
         self.kcats = Kcats(self)
+        self._reaction.add(self)
 
     def _set_id_with_model(self, value):
         """Overwrite parent id setter to change constraints and variables."""
@@ -168,7 +169,7 @@ class Protein(Object):
             }
         )
         self._model.common_protein_pool._reaction.add(self)
-        self.metabolites = {self._model.common_protein_pool: -mmw, self: 1}
+        self.metabolites = {self._model.common_protein_pool: -mmw}
 
     def unsuscribe_to_pool(self):
         """Change internal pseudorreaction to have the common pool as reactant."""
@@ -183,7 +184,7 @@ class Protein(Object):
                     }
                 )
                 self._model.common_protein_pool._reaction.remove(self)
-                self.metabolites = {self: 1}
+                self.metabolites = {}
 
     @property
     def concentration(self) -> float:
@@ -362,6 +363,16 @@ class Protein(Object):
         self.upper_bound = upper
 
     @property
+    def _metabolites(self):
+        """Get metabolites."""
+        return {**self.__metabolites, self: 1}
+
+    @_metabolites.setter
+    def _metabolites(self, metabolites: Dict):
+        """Get metabolites."""
+        self.__metabolites = metabolites
+
+    @property
     def metabolites(self) -> Dict:
         """Get metabolite of the protein pseudoreaction as the protein itself."""
         return self._metabolites
@@ -373,12 +384,40 @@ class Protein(Object):
     @property
     def reactions(self) -> FrozenSet[Reaction]:
         """Retrieve immutable private reactions property."""
-        return frozenset(self._reaction)
+        return frozenset(reac for reac in self._reaction if isinstance(reac, Reaction))
 
     @property
     def model(self):
         """Retrieve the model the reaction is a part of."""
         return self._model if hasattr(self, "_model") else None
+
+    @property
+    def reactants(self):
+        """Return a list of reactants for the reaction."""
+        return [k for k, v in self._metabolites.items() if v < 0]
+
+    @property
+    def products(self):
+        """Return a list of products for the reaction."""
+        return [k for k, v in self._metabolites.items() if v >= 0]
+
+    def __setstate__(self, state):
+        """Set attribute to point to model, mimicking `cobra.Reaction`."""
+        # These are necessary for old pickles which store attributes
+        # which have since been superceded by properties.
+        if "reaction" in state:
+            state.pop("reaction")
+        if "gene_reaction_rule" in state:
+            state["_gene_reaction_rule"] = state.pop("gene_reaction_rule")
+        if "lower_bound" in state:
+            state["_lower_bound"] = state.pop("lower_bound")
+        if "upper_bound" in state:
+            state["_upper_bound"] = state.pop("upper_bound")
+
+        self.__dict__.update(state)
+        for x in state["_metabolites"]:
+            x._model = self._model
+            x._reaction.add(self)
 
     def __str__(self) -> str:
         """Print str representation as id."""
