@@ -143,10 +143,12 @@ def change_constraint(
     new_expr: optlang.Constraint,
     model,
     sloppy: bool = False,
+    lb: Optional[float] = None,
+    ub: Optional[float] = None,
 ):
     """Change a constraint expression in the solver."""
-    lb = this_constr.lb
-    ub = this_constr.ub
+    lb = this_constr.lb if lb is None else lb
+    ub = this_constr.ub if ub is None else ub
     name = this_constr.name
     # Remove former constraint to override it
     model.remove(this_constr)
