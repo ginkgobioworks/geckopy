@@ -380,19 +380,13 @@ class Model(cobra.Model):
                     )
                     self.add_cons_vars(constraint, sloppy=True)
                 constraint_terms[constraint][forward_variable] = coeff
-                # if a reaction is reversible, the protein is used on both
-                # directions
-                rev = (
-                    reaction.reversibility
-                    # it could be a protein
-                    if hasattr(reaction, "reversibility")
-                    else False
-                )
+                # the protein is used on both directions (if no legacy model)
                 constraint_terms[constraint][reverse_variable] = (
                     coeff
                     if not self.hardcoded_rev_reactions
-                    and metabolite in self.proteins
-                    and rev
+                    and isinstance(metabolite, Protein)
+                    # proteins' pseudoexchanges should have normal coefficients
+                    and not isinstance(reaction, Protein)
                     else -coeff
                 )
 
