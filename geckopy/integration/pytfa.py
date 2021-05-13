@@ -14,6 +14,7 @@
 
 """Integration layer with pytfa. Pytfa is not installed by default."""
 
+import logging
 import pickle
 import zlib
 from typing import Dict, Optional
@@ -21,17 +22,64 @@ from typing import Dict, Optional
 import cobra
 import pandas as pd
 import pytfa
+from pytfa.optim.variables import GenericVariable, LogConcentration
 
 import geckopy
 
 
+LOGGER = logging.getLogger(__name__)
+PROT_DATA = {
+    "pKa": [7],
+    "deltaGf_err": 0,
+    "mass_std": 0.0,
+    "id": "protein",
+    "nH_std": 12,
+    "name": "protein",
+    "formula": "H",
+    "deltaGf_std": 0,
+    "error": "Nil",
+    "charge_std": 0,
+    "struct_cues": {"ART_PROT": 0},
+}
+PROT_CUE_DATA = {
+    "datfile": "ART.dgs",
+    "error": 0,
+    "formula": "",
+    "charge": 0,
+    "id": "ART_PROT",
+    "small": True,
+    "names": ["ART_PROT"],
+    "energy": 0,
+}
+
+
+class ThermoModel(pytfa.ThermoModel):
+    """Derived class to guard LC_vars against rewriting.
+
+    This is required because we need to include `LC_vars` about proteins before
+    calling `.convert()`, but convert reassigns it to an empty dictionary.
+    """
+
+    _LC_vars: Dict[cobra.Metabolite, GenericVariable] = {}
+
+    @property
+    def LC_vars(self):
+        """Get dict LogConcentration variables to use in dGr constraints."""
+        return self._LC_vars
+
+    @LC_vars.setter
+    def LC_vars(self, value: GenericVariable):
+        if value:
+            self._LC_vars = value
+
+
 def adapt_gecko_to_thermo(
     ec_model: geckopy.Model,
-    thermodb: dict,
-    compartment_data: dict,
+    thermodb: Dict,
+    compartment_data: Dict,
     solver: Optional[str] = None,
     *args,
-    **kwargs
+    **kwargs,
 ) -> pytfa.ThermoModel:
     """Prepare and convert gecko model to `pytfa.ThermoModel`.
 
@@ -48,40 +96,39 @@ def adapt_gecko_to_thermo(
     Parameters
     ----------
     model: geckopy.Model
-    thermodb: dict
+    thermodb: Dict
         from pytfa.io.load_thermo. The format is explained at
         https://pytfa.readthedocs.io/en/latest/thermoDB.html
-    compartment_data: dict
+    compartment_data: Dict
         check https://pytfa.readthedocs.io/en/latest/model.html#compartment-data
     *args, **kwargs:
         which will be passed to the pytfa.ThermoModel.__init__
     """
-    tmodel = pytfa.ThermoModel(thermodb, ec_model, *args, **kwargs)
+    thermodb["metabolites"]["protein"] = PROT_DATA
+    thermodb["cues"]["ART_PROT"] = PROT_CUE_DATA
+    # preparing + converting the model sets the constrain linear coefficients
+    # of proteins to usual values which may not be the intended behavior
+    right_prot_coeffs = {
+        prot.id: {
+            var.name: coeff
+            for var, coeff in ec_model.solver.constraints[prot.id]
+            .get_linear_coefficients(ec_model.solver.constraints[prot.id].variables)
+            .items()
+        }
+        for prot in ec_model.proteins
+    }
+    tmodel = ThermoModel(thermodb, ec_model, *args, **kwargs)
     if solver:
         tmodel.solver = solver
     tmodel.compartments = compartment_data
-    thermodb["metabolites"]["protein"] = {
-        "pKa": [7],
-        "deltaGf_err": 0,
-        "mass_std": 333.0,
-        "struct_cures": {},
-        "id": "protein",
-        "nH_std": 12,
-        "name": "protein",
-        "formula": "",
-        "deltaGf_std": 0,
-        "error": "Nil",
-        "charge_std": 0,
-        "struct_cues": {},
-    }
-    prot_data = thermodb["metabolites"]["protein"]
+    # pseudometabolites of arm reactions are equaled to its opposite side
     for prot in tmodel.proteins:
-        CompartmentpH = tmodel.compartments[prot.compartment]["pH"]
-        CompartmentionicStr = tmodel.compartments[prot.compartment]["ionicStr"]
+        # pass ownership of the proteins to the ThermoModel
+        prot._model = tmodel
         prot.thermo = pytfa.thermo.MetaboliteThermo(
-            prot_data,
-            CompartmentpH,
-            CompartmentionicStr,
+            PROT_DATA,
+            tmodel.compartments[prot.compartment]["pH"],
+            tmodel.compartments[prot.compartment]["ionicStr"],
             tmodel.TEMPERATURE,
             tmodel.MIN_pH,
             tmodel.MAX_pH,
@@ -89,10 +136,21 @@ def adapt_gecko_to_thermo(
             tmodel.thermo_unit,
         )
     tmodel.prepare()
+    # 0 dG formation for proteins so they are not used in thermo calculations
+    # proteins are not included inside "model.metabolites" so we need to add'em
     for prot in tmodel.proteins:
-        # metabolites with this formula are ignored
-        prot.formula = "H"
+        LC = tmodel.add_variable(LogConcentration, prot, lb=-1000, ub=1000)
+        tmodel.LC_vars[prot] = LC
+        prot.thermo.deltaGf_tr = 0
+        prot.thermo.deltaGf_err = 0
+    # restore whatever protein constraints we had previous to the model.repair
+    for prot_id, constraint_terms in right_prot_coeffs.items():
+        for var_name, coefficient in constraint_terms.items():
+            tmodel.constraints[prot_id].set_linear_coefficients(
+                {tmodel.variables[var_name]: coefficient}
+            )
     tmodel.convert(verbose=False)
+    # tmodel.convert(verbose=False, overwrite_lc_vars=False)
     return tmodel
 
 
@@ -113,7 +171,7 @@ def translate_model_mnx_to_seed(
     df.xref = df.xref.apply(lambda x: x[-8:])
     for met in model.metabolites:
         if "seed.id" in met.annotation:
-            met.annotation["seed.id"] = met.annotation["seed_id"]
+            met.annotation["seed_id"] = met.annotation["seed.id"]
         if "seed_id" in met.annotation:
             continue
         if "metanetx.chemical" in met.annotation:
@@ -149,6 +207,7 @@ def get_thermo_coverage(model: pytfa.thermo.ThermoModel, total=True):
         Default: True
     """
     thermo_set = get_thermo_reactions(model)
+
     return len(thermo_set) if total else len(thermo_set) / len(model.reactions)
 
 
