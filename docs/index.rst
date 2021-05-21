@@ -16,6 +16,7 @@ User's guide
     01-getting-started
     02-experimental
     03-thermodynamics
+    relaxation
 
 Dev's guide
 ~~~~~~~~~~~
