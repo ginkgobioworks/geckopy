@@ -27,6 +27,7 @@ import numbers
 import re
 from collections import defaultdict
 from math import isnan
+from pathlib import Path
 
 import libsbml
 from cobra import Configuration
@@ -115,7 +116,8 @@ def read_sbml_ec_model(
 
     """
     try:
-        doc = _get_doc_from_filename(filename)
+        fsanitized = str(filename) if isinstance(filename, Path) else filename
+        doc = _get_doc_from_filename(fsanitized)
     except IOError as e:
         raise e
     except Exception as original_error:
