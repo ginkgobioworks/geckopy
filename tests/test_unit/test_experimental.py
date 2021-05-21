@@ -96,6 +96,7 @@ def test_irreductibly_relaxed_ec_model_from_copy_number_can_grow(
     ec_model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = 0.8
     iis = elastic_upper_relaxation(ec_model, [prot.id for prot in ec_model.proteins])
     ec_model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = 0.0
-    final_gr, prots = relax_proteomics_greedy(ec_model, 0.2, protein_set=iis)
+    for prot_id in iis:
+        ec_model.proteins.get_by_id(prot_id).concentration = None
     relaxed_sol = ec_model.slim_optimize()
     assert relaxed_sol >= 0.2 and relaxed_sol > sol
