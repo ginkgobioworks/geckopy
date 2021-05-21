@@ -8,7 +8,9 @@ Project overview
     ├── protein.py
     ├── reaction.py
     ├── io.py
+    ├── flux_analysis.py
     │ ┌── __init__.py
+    │ ├── relaxation.py
     │ ├── pytfa.py
     ├─┴ integration
     │ ┌── __init__.py
@@ -49,16 +51,27 @@ geckopy/io.py
 
 Serialization and deserialization to SBML (adapting `cobrapy:autoapi/cobra/io/sbml/index`).
 
+geckopy/flux_analysis.py
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Cobrapy flux analysis functionality can generally be used for geckopy models
+but some care must be taken to make fair comparisons of flux variability analysis,
+as pointed by `Domenzain et al., 2021`. This submodule includes that and some
+utility functions to inspect and process the protein solution.
+
 geckopy/integration/
 ~~~~~~~~~~~~~~~~~~~~
 
-Integration layer for `pytfa <https://github.com/EPFL-LCSB/pytfa/>`__.
+Integration layer for `pytfa <https://github.com/EPFL-LCSB/pytfa/>`__. It
+includes relaxation algorithms for the integration of metabolomics with
+proteins.
 
 geckopy/experimental/
 ~~~~~~~~~~~~~~~~~~~~~
 
 Functionality for integration of experimental data. It includes the relaxation
-algorithms and utility functions for the annotation of molecular weights from
-`Uniprot accesion numbers`_.
+algorithms for proteomics experimental data and utility functions for the
+annotation of molecular weights from `Uniprot accesion numbers`_.
 
 .. _Uniprot accesion numbers: https://www.uniprot.org/help/accession_numbers
+.. _Domenzain et al., 2021: https://www.biorxiv.org/content/10.1101/2021.03.05.433259v1
