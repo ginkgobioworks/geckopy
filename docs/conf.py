@@ -45,7 +45,11 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.doctest",
     "autoapi.extension",
+    "nbsphinx",
 ]
+
+# The master toctree document.
+master_doc = "index"
 
 autoapi_dirs = [SRC_PATH]
 
