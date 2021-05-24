@@ -16,6 +16,7 @@
 
 import logging
 import re
+from itertools import chain
 from math import isnan
 from multiprocessing import Pool
 from typing import List, Optional, Tuple
@@ -24,6 +25,7 @@ import cobra
 import pandas as pd
 from cobra.util.solver import set_objective
 from numpy import zeros
+from optlang.symbolics import Zero
 from tqdm import tqdm
 
 from .model import Model
@@ -36,6 +38,7 @@ UNREV_PATTERN = re.compile(r"(.+)_REV(No\d)?")
 __all__ = [
     "flux_variability_analysis",
     "protein_variability_analysis",
+    "pfba_protein",
     "get_protein_bottlenecks",
     "get_protein_usage_by_reaction_rate",
     "rate_kcat_concentration",
@@ -171,6 +174,11 @@ def flux_variability_analysis(
        :math:`v_{max}, v_{max}^{rev} \forall v \in \text{reactions}`
 
     Additionally, just the combined reaction `arm_` is reported for isozymes.
+
+    See Also
+    --------
+    :py:func:`cobrapy:cobra.flux_analysis.flux_variability_analysis`
+
 
     Parameters
     ----------
@@ -330,6 +338,46 @@ def protein_variability_analysis(
     return fva_result
 
 
+def pfba_protein(model, objective=None, fraction_of_optimum=1.0):
+    """Add pFBA objective
+
+    Add objective to minimize the summed flux of all proteins to the
+    current objective.
+
+    See Also
+    -------
+    :py:func:`cobrapy:cobra.flux_analysis.pfba`
+
+    Parameters
+    ----------
+    model : cobra.Model
+        The model to add the objective to
+    objective :
+        An objective to set in combination with the pFBA objective.
+    fraction_of_optimum : float
+        Fraction of optimum which must be maintained. The original objective
+        reaction is constrained to be greater than maximal_value *
+        fraction_of_optimum.
+    """
+    with model as m:
+        if objective is not None:
+            model.objective = objective
+        if model.solver.objective.name == "_pfba_objective":
+            raise ValueError("The model already has a pFBA objective.")
+        cobra.util.fix_objective_as_constraint(model, fraction=fraction_of_optimum)
+        reaction_variables = (
+            (rxn.forward_variable, rxn.reverse_variable) for rxn in model.proteins
+        )
+        variables = chain(*reaction_variables)
+        model.objective = model.problem.Objective(
+            Zero, direction="min", sloppy=True, name="_pfba_objective"
+        )
+        model.objective.set_linear_coefficients({v: 1.0 for v in variables})
+        m.slim_optimize(error_value=None)
+        solution = cobra.core.solution.get_solution(m, reactions=model.proteins)
+    return solution
+
+
 def get_protein_usage_by_reaction_rate(
     model: Model,
     reaction: str,
@@ -378,7 +426,7 @@ def get_protein_usage_by_reaction_rate(
     for flux in fix_fluxes:
         with model:
             model.reactions.get_by_id(reaction).bounds = (flux, flux)
-            prot_usage = model.optimize()[1].to_frame()
+            prot_usage = pfba_protein(model).to_frame()
             prot_usage[reaction_plot_name] = flux
             prot_usage = prot_usage.reset_index().rename({"index": "protein"}, axis=1)
             results.append(prot_usage)

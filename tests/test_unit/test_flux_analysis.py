@@ -53,7 +53,7 @@ def test_pva(ec_model_core):
 def test_usage_x_reaction_rate_is_consistent(ec_model_core):
     """Check that the protein usage of top proteins increases with Glc uptake."""
     fluxes = get_protein_usage_by_reaction_rate(
-        ec_model_core, "EX_glc__D_e", [-0.1, -1.0, -5.0], "Glc uptake"
+        ec_model_core, "EX_glc__D_e", [-0.5, -1.0, -5.0], "Glc uptake"
     )
     assert (
         fluxes.loc[fluxes["Glc uptake"] == -0.1, "fluxes"].sum()
