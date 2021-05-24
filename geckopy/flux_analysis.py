@@ -260,7 +260,7 @@ def flux_variability_analysis(
     return fva_result
 
 
-def annotate_protein_genes(sr: pd.Series, model: Model):
+def annotate_protein_genes(sr: pd.Series, model: Model) -> pd.Series:
     """Build a series of genes mapping to a list of proteins."""
     return sr.apply(
         lambda x: ",".join(
@@ -297,6 +297,7 @@ def protein_variability_analysis(
     Return
     ------
     pandas.DataFrame
+        with columns 'minimum', 'maximum' and index as `Protein.id`
 
     """
     model = ec_model.copy()
@@ -338,8 +339,10 @@ def protein_variability_analysis(
     return fva_result
 
 
-def pfba_protein(model, objective=None, fraction_of_optimum=1.0):
-    """Add pFBA objective
+def pfba_protein(
+    model: Model, objective: Optional[str] = None, fraction_of_optimum: float = 1.0
+) -> cobra.core.Solution:
+    """Add pFBA objective.
 
     Add objective to minimize the summed flux of all proteins to the
     current objective.
@@ -358,6 +361,11 @@ def pfba_protein(model, objective=None, fraction_of_optimum=1.0):
         Fraction of optimum which must be maintained. The original objective
         reaction is constrained to be greater than maximal_value *
         fraction_of_optimum.
+
+    Result
+    ------
+    solution: cobra.core.Solution
+
     """
     with model as m:
         if objective is not None:
@@ -384,7 +392,7 @@ def get_protein_usage_by_reaction_rate(
     fix_fluxes: List[float],
     reaction_plot_name: str = "Reaction rate",
     top: int = 10,
-):
+) -> pd.DataFrame:
     """Return the top used proteins for each reaction rate.
 
     Parameters
@@ -401,6 +409,7 @@ def get_protein_usage_by_reaction_rate(
     Return
     ------
     pandas.DataFrame
+        with colums 'protein', 'fluxes', 'reduced_costs', `reaction_plot_name`, 'gene'
 
     Example
     -------
@@ -417,7 +426,7 @@ def get_protein_usage_by_reaction_rate(
         >>> # return percentages of the total protein pool
         >>> fluxes.fluxes *= 100 / 0.448
         >>> px.bar(
-                fluxes, x="protein", y="fluxes", hover_data="gene", color="fluxes",
+                fluxes, x="protein", y="fluxes", hover_data=["gene"], color="fluxes",
                 animation_frame="Glc uptake",
                 color_continuous_scale="TealGrn", template="simple_white"
             )
