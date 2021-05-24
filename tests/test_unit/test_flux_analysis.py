@@ -21,6 +21,7 @@ from geckopy.flux_analysis import (
     flux_variability_analysis,
     get_protein_bottlenecks,
     get_protein_usage_by_reaction_rate,
+    protein_variability_analysis,
     rate_kcat_concentration,
 )
 
@@ -41,6 +42,12 @@ def test_fva(ec_model_core, fva_targets):
     """Test that fva returns the expected results."""
     df = flux_variability_analysis(ec_model_core)
     assert ((df.maximum - df.minimum) > 1e-3).sum() == 38
+
+
+def test_pva(ec_model_core):
+    """Test that fva returns the expected results."""
+    df = protein_variability_analysis(ec_model_core)
+    assert ((df.maximum - df.minimum) > 1e-3).sum() == 27
 
 
 def test_usage_x_reaction_rate_is_consistent(ec_model_core):

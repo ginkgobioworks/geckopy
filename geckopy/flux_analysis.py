@@ -35,6 +35,7 @@ REV_PATTERN = re.compile(r"(No\d)|$")
 UNREV_PATTERN = re.compile(r"(.+)_REV(No\d)?")
 __all__ = [
     "flux_variability_analysis",
+    "protein_variability_analysis",
     "get_protein_bottlenecks",
     "get_protein_usage_by_reaction_rate",
     "rate_kcat_concentration",
@@ -76,10 +77,12 @@ def _sanitize_input_list(fixed_reactions: Optional[List[str]] = None) -> List:
     )
 
 
-def _init_worker(model):
+def _init_worker(model, target="reactions"):
     """Initialize a global model object for multiprocessing."""
     global _model
+    global _target
     _model = model
+    _target = target
 
 
 def isnan_none(x: float) -> bool:
@@ -93,9 +96,11 @@ def _fva_step(reaction_id):
     in the EC model.
     """
     global _model
-    reac = _model.reactions.get_by_id(reaction_id)
+    global _target
+    target = _model.__getattribute__(_target)
+    reac = target.get_by_id(reaction_id)
     rev_id = _apply_rev(reaction_id, _model)
-    rev_reac = _model.reactions.get_by_id(rev_id) if rev_id else None
+    rev_reac = target.get_by_id(rev_id) if rev_id else None
     set_objective(_model, {reac: 1})
     if rev_reac is not None:
         # if reac with duplicate is optimized, block counterpart
@@ -105,13 +110,13 @@ def _fva_step(reaction_id):
         rev_reac.bounds = prev_bounds
         # and use the reverse for the minimum (blocking forward)
         prev_bounds = reac.bounds
-        set_objective(_model, {rev_reac: 1})
+        set_objective(_model, {rev_reac: 1}, False)
         reac.bounds = 0, 0
         lb = -_model.slim_optimize()
         reac.bounds = prev_bounds
     else:
         ub = _model.slim_optimize()
-        set_objective(_model, {reac: -1})
+        set_objective(_model, {reac: -1}, False)
         lb = _model.slim_optimize()
     # handle infeasible case
     if isnan_none(lb) or isnan_none(ub):
@@ -259,13 +264,70 @@ def annotate_protein_genes(sr: pd.Series, model: Model):
     )
 
 
-def get_protein_bottlenecks(model: Model, top: int = 10):
+def get_protein_bottlenecks(model: Model, top: int = 10) -> pd.DataFrame:
     """Return `top` protein bottlenecks based on the shadow prices."""
     _, prots = model.optimize()
     df = prots.to_frame().sort_values("reduced_costs", ascending=False).head(top)
     df = df.reset_index().rename({"index": "protein"}, axis=1)
     df["gene"] = annotate_protein_genes(df.protein, model)
     return df
+
+
+def protein_variability_analysis(
+    ec_model: Model,
+    protein_list: Optional[List[str]] = None,
+    n_proc: Optional[int] = config.processes,
+) -> pd.DataFrame:
+    """Return the top used proteins for each reaction rate.
+
+    Parameters
+    ----------
+    model: geckopy.Model
+    protein_list: list[float]
+    n_proc: Optional[int]
+
+    Return
+    ------
+    pandas.DataFrame
+
+    """
+    model = ec_model.copy()
+    fix_solution = model.slim_optimize()
+    _get_objective_reaction(model).bounds = fix_solution, fix_solution
+    proteins = (
+        protein_list[:]
+        if protein_list is not None
+        else [prot.id for prot in model.proteins]
+    )
+    fva_result = pd.DataFrame(
+        {
+            "minimum": zeros(len(proteins), dtype=float),
+            "maximum": zeros(len(proteins), dtype=float),
+        },
+        index=proteins,
+    )
+    chunk_size = len(proteins) // n_proc
+    if n_proc > 1:
+        with Pool(
+            n_proc,
+            initializer=_init_worker,
+            initargs=(model, "proteins"),
+        ) as pool:
+            for rxn_id, lb, ub in tqdm(
+                pool.imap_unordered(_fva_step, proteins, chunksize=chunk_size),
+                total=len(proteins),
+                desc="FVA",
+            ):
+                fva_result.at[rxn_id, :] = lb, ub
+    else:
+        _init_worker(model, "proteins")
+        for rxn_id, lb, ub in tqdm(
+            map(_fva_step, proteins),
+            total=len(proteins),
+            desc="FVA",
+        ):
+            fva_result.at[rxn_id, :] = lb, ub
+    return fva_result
 
 
 def get_protein_usage_by_reaction_rate(
