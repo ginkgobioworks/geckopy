@@ -70,8 +70,8 @@ To build the documentation locally, run
 
 .. code-block:: shell
 
-  pip install -r requirements_rtd.txt
   cd docs
+  pip install -r requirements.txt
   make ipy2rst  # if there are notebooks for the docs at docs/notebooks
   make html
 
