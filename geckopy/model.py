@@ -244,14 +244,24 @@ class Model(cobra.Model):
 
         new.proteins = DictList()
         for protein in self.proteins:
-            new_prot = protein.__class__()
+            new_protein = protein.__class__()
             for attr, value in protein.__dict__.items():
                 if attr not in do_not_copy_by_ref:
-                    new_prot.__dict__[attr] = (
+                    new_protein.__dict__[attr] = (
                         copy(value) if attr == "formula" else value
                     )
-            new_prot._model = new
-            new.proteins.append(new_prot)
+            new_protein._model = new
+            for attr, value in protein.__dict__.items():
+                if attr not in do_not_copy_by_ref:
+                    new_protein.__dict__[attr] = copy(value)
+            new_protein._model = new
+            new.proteins.append(new_protein)
+            # update awareness
+            for metabolite, stoic in protein._metabolites.items():
+                if metabolite not in new.proteins:
+                    new_met = new.metabolites.get_by_id(metabolite.id)
+                    new_protein._metabolites[new_met] = stoic
+                    new_met._protein.add(new_protein)
 
         new.genes = DictList()
         for gene in self.genes:
