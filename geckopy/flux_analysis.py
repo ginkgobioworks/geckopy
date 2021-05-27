@@ -432,13 +432,14 @@ def get_protein_usage_by_reaction_rate(
             )
     """
     results = []
+    prev_bounds = model.reactions.get_by_id(reaction).bounds
     for flux in fix_fluxes:
-        with model:
-            model.reactions.get_by_id(reaction).bounds = (flux, flux)
-            prot_usage = pfba_protein(model).to_frame()
-            prot_usage[reaction_plot_name] = flux
-            prot_usage = prot_usage.reset_index().rename({"index": "protein"}, axis=1)
-            results.append(prot_usage)
+        model.reactions.get_by_id(reaction).bounds = (flux, flux)
+        prot_usage = pfba_protein(model).to_frame()
+        prot_usage[reaction_plot_name] = flux
+        prot_usage = prot_usage.reset_index().rename({"index": "protein"}, axis=1)
+        results.append(prot_usage)
+    model.reactions.get_by_id(reaction).bounds = prev_bounds
     proteins = pd.concat(results).reset_index(drop=True)
     to_plot = (
         proteins.groupby(reaction_plot_name)
