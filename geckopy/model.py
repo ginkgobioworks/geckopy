@@ -261,7 +261,7 @@ class Model(cobra.Model):
                 if metabolite not in new.proteins:
                     new_met = new.metabolites.get_by_id(metabolite.id)
                     new_protein._metabolites[new_met] = stoic
-                    new_met._protein.add(new_protein)
+                    new_met._reaction.add(new_protein)
 
         new.genes = DictList()
         for gene in self.genes:
