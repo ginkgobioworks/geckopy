@@ -8,7 +8,7 @@ Experimental data
 .. math::
 
   \begin{align}
-    \frac{\text{mmol}}{\text{cell}} &= \frac{\bf{molecules}}{\bf{cell}} \frac{10^3\text{mol}}{\text{molecules}} \\
+    \frac{\text{mmol}}{\text{cell}} &= \frac{\bf{molecules}}{\bf{cell}} \frac{10^3\text{mmol}}{\text{6.022 10^23 molecules}} \\
     \frac{\text{mmol}}{\text{gDW}} &= \frac{\bf{mmol}}{\bf{cell}} \frac{\text{cell}}{fL} \frac{fL}{g}\frac{g}{\text{gDW}}
   \end{align}
 
@@ -124,10 +124,10 @@ Pool constraint
 A pool constraint can be applied to the :class:`~geckopy.protein.Proteins`\ s
 to account for protein crowding. This is useful when there are proteins with
 missing concentrations in the model but the total amount of protein that the
-cell can allocate is known
+cell can allocate is known.
 
-The amount of flux a protein can take from the pool is their
-:math:`M_W 10^{-3}`. This value can be scrapped with
+The amount of flux a protein can take from the pool is their :math:`M_w`
+(in :math:`\frac{g}{mmol}`). This value can be scrapped with
 :func:`~geckopy.experimental.molecular_weights.extract_proteins`
 
 .. code:: ipython3
@@ -143,12 +143,16 @@ The amount of flux a protein can take from the pool is their
 As explained in the `Appendix of Sánchez et al.,
 2017 <https://www.embopress.org/action/downloadSupplement?doi=10.15252%2Fmsb.20167411&file=msb167411-sup-0001-Appendix.pdf>`__,
 
--  `sigma_saturation_factor` is the parameter adjusting how much of a
-   protein pool can take part in reactions.
--  `fn_mass_fraction_unmeasured_matched` is
+-  ``p_total`` is the protein mass in :math:`\frac{g}{g_{DW}}` of the
+   proteins in the model.
+-  ``sigma_saturation_factor`` is the parameter adjusting how much of a
+   protein pool can take part in reactions; i.e, how much of the
+   measured proteome it is participation in the metabolism.
+-  ``fn_mass_fraction_unmeasured_matched`` is
    :math:`\frac{f_n}{1 - f_m}`, where :math:`f_n` is the mass fraction
    of unmeasured protein divided and :math:`f_m` is the fraction of
-   proteins measured.
+   proteins measured. This way, it is 1 if no protein concentration is
+   known.
 
 .. code:: ipython3
 

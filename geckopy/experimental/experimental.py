@@ -73,7 +73,31 @@ def from_copy_number(
     dens: float,
     water: float,
 ) -> cobra.Model:
-    """Convert `cell_copies` to mmol/gDW and apply them to `model`."""
+    """Convert `cell_copies` to mmol/gDW and apply them to `model`.
+
+    Parameters
+    ----------
+    model: cobra.Model
+        cobra or geckopy Model (will be converted to geckopy.Model). It is NOT
+        modified inplace.
+    index: pd.Series
+        uniprot IDs
+    cell_copies: pd.Series
+        cell copies/ cell per proteins
+    stdev: pd.Series
+        standard deviation of the cell copies
+    vol: float
+        cell volume
+    dens: float
+        cell density
+    water: float
+        water content fraction (0-1)
+
+    Returns
+    -------
+    geckopy.Model
+        with the proteomics constraints applied
+    """
     df = pd.DataFrame({"cell_copies": cell_copies, "CV": stdev})
     # from molecules/cell to mmol/gDW
     df["copies_upper"] = df["cell_copies"] + 0.5 * df["CV"] / 100 * df["cell_copies"]

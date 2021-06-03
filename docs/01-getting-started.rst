@@ -5,7 +5,7 @@ Enzyme Constraint (gecko) models work as regular cobra models with:
 
 -  Proteins as additional metabolites.
 -  Protein pseudorreactions, which simulate the production of the
-   protein by the cell.
+   protein by the cell (in :math:`mmol/g_{DW}/h`).
 -  (Optional) Pool constraint: all proteins must be below the total
    quantified proteome.
 
