@@ -11,9 +11,13 @@ form of a enum :class:`~geckopy.experimental.relaxation.ObjectiveRule`
 that all of the relaxation functions of geckopy accept as a parameter
 (:code:`objective_rule`):
 
-- Objective_rule.MIN_ELASTIC_SUM: :math:`\sum_{v \in \text{elastic vars}} v_{flux}` (LP).
-- Objective_rule.MIN_ELASTIC_SUM_OBJECTIVE: :math:`\sum_{e \in \text{elastic vars}} + \text{prev objective}` (LP).
-- Objective_rule.MIN_MILP_COUNT: :math:`\sum_i^{N} e_i` where e is a binary variable (MILP).
+- Objective_rule.MIN_ELASTIC_SUM: :math:`\sum_{e \in \text{elastic vars}} e`
+  (LP), where e is an continuous variable from 0 to 1000.
+- Objective_rule.MIN_ELASTIC_SUM_OBJECTIVE: :math:`\sum_{e \in \text{elastic
+  vars}} e + \text{prev objective}` (LP), where e is an continuous variable
+  from 0 to 1000.
+- Objective_rule.MIN_MILP_COUNT: :math:`\sum_i^{N} e_i` where e is a binary
+  variable (MILP).
 
 Relaxation functions on :class:`geckopy.Model`
 ----------------------------------------------
