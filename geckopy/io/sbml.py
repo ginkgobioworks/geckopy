@@ -74,6 +74,8 @@ from geckopy.model import Model
 from geckopy.protein import Protein
 from geckopy.reaction import Reaction
 
+from .standard import group_proteins
+
 
 __all__ = ["read_sbml_ec_model", "write_sbml_ec_model"]
 
@@ -757,7 +759,11 @@ def read_sbml_ec_model(
 
 
 def write_sbml_ec_model(
-    ec_model: Model, filename: str, f_replace=F_REPLACE, units=True
+    ec_model: Model,
+    filename: str,
+    f_replace=F_REPLACE,
+    units=True,
+    group_untyped_proteins: bool = True,
 ):
     """Write cobra model to filename.
 
@@ -786,10 +792,19 @@ def write_sbml_ec_model(
     filename : string
         path to which the model is written
     f_replace: dict of replacement functions for id replacement
+    group_untyped_proteins: bool
+        if True (default) the proteins whose id is not compliant with Uniprot
+        and which are not part of the :code:`Protein` group will be added to it.
+        This is an inplace operation!
     """
     cobra_model = ec_model
     if f_replace is None:
         f_replace = {}
+    if group_untyped_proteins:
+        prot_to_add = [
+            prot.id for prot in cobra_model.proteins if not PROT_PATTERN.match(prot.id)
+        ]
+        group_proteins(ec_model, prot_to_add)
 
     sbml_ns = libsbml.SBMLNamespaces(3, 1)  # SBML L3V1
     sbml_ns.addPackageNamespace("fbc", 2)  # fbc-v2

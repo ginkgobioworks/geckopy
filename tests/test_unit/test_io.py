@@ -76,3 +76,29 @@ def test_serialized_model_has_concentrations(dummy_ec_model):
     )
     assert redeserialized.proteins.prot_P0A825.concentration == 123
     os.remove("_tmp.xml")
+
+
+def test_proteins_are_grouped_on_write(dummy_ec_model):
+    """Check that concentrations are properly saved on SBML serialization."""
+    dummy_ec_model.add_proteins([geckopy.Protein("my_unconventional_protein")])
+
+    assert (
+        dummy_ec_model.proteins.prot_P0A805
+        not in dummy_ec_model.groups.get_by_id("Protein").members
+    )
+    geckopy.io.write_sbml_ec_model(
+        dummy_ec_model, "_tmp_auto_grouping.xml", group_untyped_proteins=True  # default
+    )
+    # proteins that were not grouped but follow the conventions are not grouped
+    assert (
+        dummy_ec_model.proteins.prot_P0A805
+        not in dummy_ec_model.groups.get_by_id("Protein").members
+    )
+    redeserialized = geckopy.io.read_sbml_ec_model(
+        "_tmp_auto_grouping.xml", hardcoded_rev_reactions=False
+    )
+    assert (
+        redeserialized.proteins.my_unconventional_protein.id
+        == "my_unconventional_protein"
+    )
+    os.remove("_tmp_auto_grouping.xml")

@@ -56,7 +56,7 @@ def cobra_model(path_eciML1515):
     return cobra.io.read_sbml_model(path_eciML1515)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def dummy_ec_model():
     """Load from cobrapy."""
     return geckopy.io.read_sbml_ec_model(
