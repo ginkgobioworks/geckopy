@@ -112,13 +112,13 @@ class Model(cobra.Model):
 
     def get_total_measured_proteins(self) -> float:
         """Sum of all `Proteins` in the model that has a concentration."""
-        measured = sum(
-            prot.concentration
-            for prot in self.proteins
+        return sum(
             # nan + number = nan!
-            if not isnan(prot.concentration) and prot.concentration
+            prot.concentration if not isnan(prot.concentration) else 0
+            for prot in self.proteins
+            # guard against None
+            if prot.concentration
         )
-        return 0 if isnan(measured) or not measured else measured
 
     def constrain_pool(
         self,
@@ -181,7 +181,10 @@ class Model(cobra.Model):
             )
         self.protein_pool_exchange.bounds = 0, fs_matched_adjusted
 
-        m_weigths = [prot.mw for prot in proteins if prot.mw]
+        # Mw guarding against None and nan
+        m_weigths = [
+            prot.mw if not isnan(prot.mw) else 0 for prot in proteins if prot.mw
+        ]
         average_mmw = sum(m_weigths) / len(m_weigths) / 1000.0
         for protein in unmeasured_prots:
             mmw = protein.mw / 1000 if protein.mw else average_mmw
