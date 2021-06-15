@@ -14,6 +14,8 @@
 
 """Protein manipulations for SBML compliance."""
 
+import warnings
+from collections import Counter
 from typing import List, Optional, Union
 
 from cobra.core.group import Group
@@ -46,3 +48,44 @@ def group_proteins(
     model.groups.get_by_id("Protein").add_members(
         [model.proteins.get_by_id(prot_id) for prot_id in proteins_to_add]
     )
+
+
+def annotate_gene_protein_rules(model: Model):
+    """Point gene to proteins and viceversa using gene annotations.
+
+    EXPERIMENTAL: This is a helper to ease the gene to protein conversion but
+    more thought should be put in how to make the GPR into something typed in the
+    SBML doc that relates to the actual data structures in the model.
+    """
+    warnings.warn("This function is experimental and subject to change in the future.")
+    # add empty attributes for the proteins for consistency
+    for prot in model.proteins:
+        prot.gene = None
+    for gene in model.genes:
+        gene.protein = None
+        if "uniprot" in gene.annotation:
+            prot_id = gene.annotation["uniprot"]
+            prot = None
+            if prot_id in model.proteins:
+                prot = model.proteins.get_by_id(prot_id)
+            elif f"prot_{prot_id}" in model.proteins:
+                prot = model.proteins.get_by_id(f"prot_{prot_id}")
+            if prot is not None:
+                gene.protein = prot
+                prot.gene = gene
+    for prot in model.proteins:
+        if prot.gene is None:
+            # try to relate a gene to a protein using the reactions as a proxy
+            gene_counter = Counter(
+                (
+                    gene
+                    for reac in prot.reactions
+                    # a reaction might have more than one genes and proteins
+                    if len(reac.genes) == 1
+                    for gene in reac.genes
+                )
+            )
+            if len(gene_counter) > 0:
+                gene = gene_counter.most_common(1)[0][0]
+                gene.protein = prot
+                prot.gene = gene

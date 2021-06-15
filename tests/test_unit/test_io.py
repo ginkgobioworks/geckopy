@@ -102,3 +102,19 @@ def test_proteins_are_grouped_on_write(dummy_ec_model):
         == "my_unconventional_protein"
     )
     os.remove("_tmp_auto_grouping.xml")
+
+
+def test_gene_and_proteins_point_to_each_other(ec_model_core):
+    """Check that annotating genes and proteins point to each other."""
+    geckopy.io.standard.annotate_gene_protein_rules(ec_model_core)
+    assert ec_model_core.genes.get_by_id(
+        "b1241"
+    ).protein == ec_model_core.proteins.get_by_id("prot_P0A9Q7")
+    assert (
+        ec_model_core.proteins.get_by_id("prot_P0A9Q7")
+        == ec_model_core.genes.get_by_id("b1241").protein
+    )
+    # all proteins in the EC core model are in a gene
+    assert sum(gene.protein is not None for gene in ec_model_core.genes) == len(
+        ec_model_core.proteins
+    )
