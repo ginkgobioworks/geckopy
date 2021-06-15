@@ -61,7 +61,7 @@ def test_added_reaction_gathers_proteins(ec_model_core):
     """Add a reaction with a protein and check that it is correctly structured."""
     model = geckopy.Model("one_reaction_model")
     rxn = ec_model_core.reactions.GLUSy
-    model.add_reaction(rxn)
+    model.add_reactions([rxn])
     assert len(model.reactions) == 1
     assert len(model.metabolites) == 6
     assert {prot.id for prot in model.proteins} == {"prot_P09832", "prot_P09831"}

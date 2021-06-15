@@ -56,7 +56,7 @@ def test_protein_parsing_does_not_get_normal_metabolites(dummy_ec_model):
 
 
 def test_serialized_model_grows(slim_solution_core, ec_model_core):
-    """Check that concentrations are properly saved on SBML serialization."""
+    """Check that deserialized model grows at the same rate."""
     geckopy.io.write_sbml_ec_model(ec_model_core, "_tmpfull.xml")
     redeserialized = geckopy.io.read_sbml_ec_model(
         "_tmpfull.xml", hardcoded_rev_reactions=False
@@ -79,7 +79,7 @@ def test_serialized_model_has_concentrations(dummy_ec_model):
 
 
 def test_proteins_are_grouped_on_write(dummy_ec_model):
-    """Check that concentrations are properly saved on SBML serialization."""
+    """Check that grouped proteins not following naming are properly handled."""
     dummy_ec_model.add_proteins([geckopy.Protein("my_unconventional_protein")])
 
     assert (
