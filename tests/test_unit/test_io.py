@@ -104,6 +104,18 @@ def test_proteins_are_grouped_on_write(dummy_ec_model):
     os.remove("_tmp_auto_grouping.xml")
 
 
+def test_grouped_proteins_are_correctly_deserialized(ec_model_core):
+    """Check that deepcopy works."""
+    copied = ec_model_core.copy()
+    copied.reactions.NH4t.add_protein("W", 60)
+    geckopy.io.write_sbml_ec_model(
+        copied, "_tmp_with_prot.xml", group_untyped_proteins=True  # default
+    )
+    model = geckopy.io.read_sbml_ec_model("_tmp_with_prot.xml")
+    assert pytest.approx(model.proteins.W.kcats["NH4t"]) == 60
+    os.remove("_tmp_with_prot.xml")
+
+
 def test_gene_and_proteins_point_to_each_other(ec_model_core):
     """Check that annotating genes and proteins point to each other."""
     geckopy.io.standard.annotate_gene_protein_rules(ec_model_core)

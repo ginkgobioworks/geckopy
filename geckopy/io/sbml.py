@@ -742,10 +742,23 @@ def read_sbml_ec_model(
     # already added based on naming conventions
     if geckopy_model.groups.query("Protein"):
         g_proteins = geckopy_model.groups.Protein.members.copy()
-        g_proteins = [prot for prot in g_proteins if prot not in geckopy_model.proteins]
+        g_proteins = {
+            prot: {reac: reac.metabolites[prot] for reac in prot.reactions}
+            for prot in g_proteins
+            if prot not in geckopy_model.proteins
+        }
+
         if g_proteins:
-            geckopy_model.remove_metabolites(g_proteins)
+            geckopy_model.remove_metabolites(g_proteins.keys())
             geckopy_model.add_proteins([Protein(prot) for prot in g_proteins])
+            for prot, reactions in g_proteins.items():
+                for reac, stoich in reactions.items():
+                    # reverse the (negative) stoichiometry coefficient to kcat
+                    # we expect that Proteins that are identified only by their
+                    # group are respecting the specification and do form part
+                    # of reactions
+                    # TODO: provide options to tune this behvior
+                    reac.add_protein(prot.id, -1 / (stoich * 3600))
 
     # general hint for missing flux bounds
     if missing_bounds:
