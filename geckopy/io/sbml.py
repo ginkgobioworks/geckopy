@@ -25,6 +25,7 @@ import datetime
 import logging
 import numbers
 import re
+import warnings
 from collections import defaultdict
 from math import isnan
 from pathlib import Path
@@ -798,6 +799,12 @@ def write_sbml_ec_model(
     "test.zip". Similarly, the filename in the archive will be
     "test.sbml" if the given filename is "test.sbml.zip".
 
+    Warnings
+    --------
+    If :meth:`geckopy.Model.constrain_pool()` was called on the model, the
+    protein pool (exchange and metabolite) will be ignored and NOT written
+    to the SBML file. A `UserWarning` appears in this case.
+
     Parameters
     ----------
     cobra_model : geckopy.Model
@@ -811,6 +818,12 @@ def write_sbml_ec_model(
         This is an inplace operation!
     """
     cobra_model = ec_model
+    protein_pool_metabolite = None
+    protein_pool_exchange = None
+    if hasattr(ec_model, "protein_pool_exchange"):
+        warnings.warn("Protein pool will not be serialized to the SBML document.")
+        protein_pool_metabolite = ec_model.common_protein_pool
+        protein_pool_exchange = ec_model.protein_pool_exchange
     if f_replace is None:
         f_replace = {}
     if group_untyped_proteins:
@@ -921,6 +934,8 @@ def write_sbml_ec_model(
 
     # Species
     for metabolite in cobra_model.metabolites:
+        if metabolite == protein_pool_metabolite:
+            continue
         specie: libsbml.Species = model.createSpecies()
         specie.setId(
             f_replace[F_SPECIE_REV](metabolite.id)
@@ -990,6 +1005,8 @@ def write_sbml_ec_model(
     # Reactions
     reaction_coefficients = linear_reaction_coefficients(cobra_model)
     for cobra_reaction in cobra_model.reactions:
+        if cobra_reaction == protein_pool_exchange:
+            continue
         rid = cobra_reaction.id
         if f_replace and F_REACTION_REV in f_replace:
             rid = f_replace[F_REACTION_REV](rid)
