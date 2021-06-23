@@ -111,3 +111,13 @@ class Reaction(cobra.Reaction):
         #                 reversibly=False,
         #             )
         #         )
+
+    def remove_protein(self, protein: Protein):
+        """Remove protein from the reaction."""
+        model = self.model
+        if model is not None:
+            model.constraints[protein.id].set_linear_coefficients(
+                {self.forward_variable: 0, self.reverse_variable: 0}
+            )
+        protein._reaction.remove(self)
+        self._metabolites.pop(protein)

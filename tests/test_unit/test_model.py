@@ -65,3 +65,19 @@ def test_added_reaction_gathers_proteins(ec_model_core):
     assert len(model.reactions) == 1
     assert len(model.metabolites) == 6
     assert {prot.id for prot in model.proteins} == {"prot_P09832", "prot_P09831"}
+
+
+def test_removing_protein_restores_solution(ec_model_core, slim_solution_core):
+    """Remove a reaction and check that it is not in model."""
+    model = ec_model_core.copy()
+    model.proteins.prot_P14407.add_concentration(0.0)
+    constrained_solution = model.slim_optimize()
+    assert slim_solution_core - 1e-3 > constrained_solution
+    n_metabolites = len(model.reactions.FUM.metabolites)
+    model.remove_proteins(model.proteins.prot_P14407)
+    # not in its reaction
+    assert n_metabolites - 1 == len(model.reactions.FUM.metabolites)
+    # not in its model
+    assert "prot_P14407" not in model.proteins
+    # solution is recovered
+    assert approx(model.slim_optimize()) == slim_solution_core

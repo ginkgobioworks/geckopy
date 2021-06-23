@@ -439,6 +439,35 @@ class Model(cobra.Model):
         self.proteins += pruned
         self._populate_solver([], None, pruned)
 
+    def remove_proteins(self, protein_list: List[Protein]):
+        """Remove a list of proteins from self.
+
+        Parameters
+        ----------
+        protein_list : list
+            A list with `cobra.Metabolite` objects as elements.
+        """
+        if not hasattr(protein_list, "__iter__"):
+            protein_list = [protein_list]
+        # Make sure proteins exist in model
+        protein_list = [x for x in protein_list if x.id in self.proteins]
+        for x in protein_list:
+
+            # remove reference to the protein in all groups
+            associated_groups = self.get_associated_groups(x)
+            for group in associated_groups:
+                group.remove_members(x)
+
+            for the_reaction in list(x._reaction):
+                if isinstance(the_reaction, Reaction):
+                    the_reaction.remove_protein(x)
+                else:
+                    # the protein itself
+                    self.remove_cons_vars([x.forward_variable, x.reverse_variable])
+
+            x._model = None
+        self.proteins -= protein_list
+
     def add_reactions(self, reaction_list: Iterator[Reaction]):
         """Add reactions to the model.
 
