@@ -49,9 +49,10 @@ def test_protein_are_not_model_metabolites(ec_model_core):
 
 def test_kcats_retrieve_right_coefficients(ec_model_core):
     """Test kcat interface."""
-    a_prot = ec_model_core.proteins.get_by_id("prot_P0A9P0")
+    # this copy is to ensure that kcats internal references are also updated
+    model = ec_model_core.copy()
+    a_prot = model.proteins.get_by_id("prot_P0A9P0")
+    print(model.reactions.get_by_id("PDH").metabolites[a_prot])
     assert int(a_prot.kcats["PDH"]) == int(37.90)
     a_prot.kcats["PDH"] = 2
-    assert ec_model_core.reactions.get_by_id("PDH").metabolites[a_prot] == -1 / (
-        2 * 3600
-    )
+    assert model.reactions.get_by_id("PDH").metabolites[a_prot] == -1 / (2 * 3600)

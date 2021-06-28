@@ -499,11 +499,30 @@ class Kcats:
         # TODO: wrong
         if self._model_warn(key, "set"):
             return
+        model = self._protein._model
         if isinstance(key, str):
-            reac = self._protein.model.reactions.get_by_id(key)
+            reac = model.reactions.get_by_id(key)
         else:
             reac = key
-        reac._metabolites[self._protein] = -1 / (3600 * val)
+        coefficient = -1 / (3600 * val)
+        reac._metabolites[self._protein] = coefficient
+        # update corresponding linear coefficients in solver
+        non_splitted_reaction = (
+            list(
+                model.constraints[self._protein.id]
+                .get_linear_coefficients([reac.reverse_variable])
+                .values()
+            )[0]
+            < 0
+        )
+        model.constraints[self._protein.id].set_linear_coefficients(
+            {
+                reac.forward_variable: coefficient,
+                reac.reverse_variable: coefficient
+                if non_splitted_reaction
+                else -coefficient,
+            }
+        )
 
     def _model_warn(self, key: Union[Reaction, str], action: str):
         if not hasattr(self._protein, "model"):
