@@ -159,7 +159,7 @@ class Model(cobra.Model):
         unmeasured_prots = [
             prot
             for prot in proteins
-            if prot.concentration and ~isnan(prot.concentration)
+            if prot.concentration is None or isnan(prot.concentration)
         ]
         if not unmeasured_prots:
             return
