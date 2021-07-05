@@ -17,10 +17,13 @@
 This tests are for GLPK and they are not consistent with CPLEX and gurobi.
 However, CPLEX and gurobi are both consistent in the same solution.
 """
+
 from geckopy.flux_analysis import (
+    count_protein_saturation,
     flux_variability_analysis,
     get_protein_bottlenecks,
     get_protein_usage_by_reaction_rate,
+    pfba_protein,
     protein_variability_analysis,
     rate_kcat_concentration,
 )
@@ -77,3 +80,19 @@ def test_kcat_concentration_rate(ec_model_core):
         ec_model_core, "prot_P0A9P0", "PDH", [10, 100, 300, 639]
     )
     assert kcat_x_flux[0][1] < kcat_x_flux[1][1] < kcat_x_flux[2][1]
+
+
+def test_coverage_of_enzyme_saturation_on_fully_saturated_model(ec_model_core):
+    """Check that the coverage of a saturated model equals to its number of proteins."""
+    ec_model_core.slim_optimize()
+    assert count_protein_saturation(ec_model_core) != len(ec_model_core.proteins)
+    solution = pfba_protein(ec_model_core).to_frame()
+    solution["protein"] = solution.index
+    solution.apply(
+        lambda x: ec_model_core.proteins.get_by_id(x.protein).add_concentration(
+            x.fluxes
+        ),
+        axis=1,
+    )
+    ec_model_core.slim_optimize()
+    assert count_protein_saturation(ec_model_core) == len(ec_model_core.proteins)

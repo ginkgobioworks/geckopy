@@ -462,3 +462,18 @@ def rate_kcat_concentration(
         return ec_model.slim_optimize()
 
     return [(optimize_with_kcat(kcat), kcat) for kcat in kcat_range]
+
+
+def count_protein_saturation(model: Model):
+    """Compute the number of proteins that are saturated."""
+    return sum(
+        1 for prot in model.proteins if abs(prot.upper_bound - prot.contribution) < 1e-7
+    )
+
+
+def get_average_protein_saturation(model: Model):
+    """Compute the average upper bounds usage by the proteins in the model."""
+    non_zero_prots = [prot for prot in model.proteins if prot.upper_bound]
+    return sum(prot.contribution / prot.upper_bound for prot in non_zero_prots) / len(
+        non_zero_prots
+    )
