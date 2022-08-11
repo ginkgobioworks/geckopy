@@ -19,6 +19,7 @@ from math import isnan
 import pandas as pd
 
 from geckopy.experimental import from_copy_number, from_mmol_gDW
+from geckopy.experimental.molecular_weights import extract_proteins
 from geckopy.experimental.relaxation import (
     elastic_upper_relaxation,
     get_upper_relaxation,
@@ -100,3 +101,11 @@ def test_irreductibly_relaxed_ec_model_from_copy_number_can_grow(
         ec_model.proteins.get_by_id(prot_id).concentration = None
     relaxed_sol = ec_model.slim_optimize()
     assert relaxed_sol >= 0.2 and relaxed_sol > sol
+
+
+def test_extract_proteins_retrieves_all_mw(ec_model_core):
+    all_proteins = {prot.id[5:]: prot.id for prot in ec_model_core.proteins}
+    print(len(all_proteins))
+    df = extract_proteins(ec_model_core, all_proteins=all_proteins)
+    assert len(df["MW"]) == len(ec_model_core.proteins)
+    assert (df["MW"] != 0).all()
