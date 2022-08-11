@@ -15,11 +15,11 @@
 """Build dataframe with protein reactions identifiers, Uniprot IDs and MW."""
 
 import re
-import urllib.parse
-import urllib.request
-from typing import Dict, Optional
+from itertools import zip_longest
+from typing import Any, Dict, Iterable, Optional
 
 import pandas as pd
+import requests
 
 from geckopy.model import Model
 
@@ -27,8 +27,6 @@ from geckopy.model import Model
 __all__ = ["get_uniprot", "parse_mw", "extract_proteins"]
 
 
-DEFAULT_PARAMS = {"from": "ACC+ID", "to": "ACC", "format": "txt", "query": ""}
-URL = "https://www.uniprot.org/uploadlists/"
 pat_mw = re.compile(r"\nSQ   SEQUENCE.+  (\d+) MW;")
 UNIPROT_PATTERN = re.compile(
     r"(?:prot_)?([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})"
@@ -36,34 +34,29 @@ UNIPROT_PATTERN = re.compile(
 
 
 def get_uniprot(query: str) -> str:
-    """Get uniprot information corresponding to a query.
-
-    Parameters
-    ----------
-    query: str
-        an UNIPROT ID(s), separated by spaces
-
-    """
-    # WARNING: side effects on DEFAULT_PARAMS
-    params = DEFAULT_PARAMS
-    params["query"] = query
-    data = urllib.parse.urlencode(params)
-    data = data.encode("utf-8")
-    req = urllib.request.Request(URL, data)
-    with urllib.request.urlopen(req) as f:
-        response = f.read()
-
-    return response.decode("utf-8")
+    """Get uniprot information in JSON corresponding to a query."""
+    url = f"https://rest.uniprot.org/uniprotkb/search?query={query}&format=json"
+    return requests.get(url).json()["results"]
 
 
-def parse_mw(uniprot_info: str) -> str:
+def parse_mw(uniprot_info: str) -> dict[str, float]:
     """Get all MW of uniprot text (Dalton)."""
-    return pat_mw.findall(uniprot_info)
+    return {
+        entry["primaryAccession"]: float(entry["sequence"]["molWeight"])
+        for entry in uniprot_info
+    }
 
 
 def _get_all_proteins(model: Model, key_fn) -> Dict:
     """Generate a set of dict of Uniprot ID: reaction id from a `model`."""
     return {key_fn(prot): prot.id for prot in model.proteins}
+
+
+def _chunk_list(x: list[Any], n=25) -> list[Iterable[Any]]:
+    return list(
+        [el for el in chunk if el != ""]
+        for chunk in zip_longest(*[iter(x)] * n, fillvalue="")
+    )
 
 
 def extract_proteins(
@@ -93,14 +86,19 @@ def extract_proteins(
         all_proteins = _get_all_proteins(model, key_fn)
     if not all_proteins:
         raise Exception("Set of proteins exchanges couldn't be resolved.")
+    # get all the text in batches of 25 (max allowed by Uniprot)
+    prot_to_mw = {}
+    for chunk in _chunk_list(list(all_proteins.keys()), 25):
+        prot_to_mw.update(
+            parse_mw(get_uniprot("+OR+".join([f"accession:{prot}" for prot in chunk])))
+        )
     df = pd.DataFrame(
         {
             "uniprot": list(all_proteins.keys()),
             "reactions": list(all_proteins.values()),
+            "MW": [prot_to_mw[prot] for prot in all_proteins],
         }
     )
-    # get all the text in batch
-    df["MW"] = parse_mw(get_uniprot(" ".join(list(all_proteins.keys()))))
     # from the regex, we get strings but we need numerics
     df["MW"] = pd.to_numeric(df["MW"])
     return df
