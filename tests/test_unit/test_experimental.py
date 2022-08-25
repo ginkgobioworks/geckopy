@@ -104,8 +104,10 @@ def test_irreductibly_relaxed_ec_model_from_copy_number_can_grow(
 
 
 def test_extract_proteins_retrieves_all_mw(ec_model_core):
+    """Test that all MW can be retrieved fom uniprot."""
     all_proteins = {prot.id[5:]: prot.id for prot in ec_model_core.proteins}
-    print(len(all_proteins))
     df = extract_proteins(ec_model_core, all_proteins=all_proteins)
     assert len(df["MW"]) == len(ec_model_core.proteins)
     assert (df["MW"] != 0).all()
+    for row in df.itertuples():
+        ec_model_core.proteins.get_by_id(row[2]).mw = row[3]
