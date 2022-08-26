@@ -127,7 +127,7 @@ class Model(cobra.Model):
         fn_mass_fraction_unmeasured_matched: float,
         protein_list: List[str] = None,
     ):
-        """Constrain the draw reactions for the unmeasured (common protein pool) proteins.
+        """Constrain the draw reactions for unmeasured (common protein pool) proteins.
 
         Adapted from [geckopy]
         (https://github.com/SysBioChalmers/GECKO/blob/master/geckopy/geckopy/gecko.py#L184)
