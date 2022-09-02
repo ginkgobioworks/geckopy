@@ -260,7 +260,8 @@ or the thermodynamic constraint, see the
     raw_proteomics = pd.read_csv(DATA / "ecoli_proteomics_schmidt2016S5.tsv")
     ec_model_constrained = from_copy_number(
         ec_model.copy(),
-        index=raw_proteomics["uniprot"],
+        # the index should be the IDs of the proteins exactly as in the model!
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],
         vol=2.3,
@@ -308,7 +309,8 @@ will simply remove their concentrations for illustration purposes.
 
     ec_model_constrained = from_copy_number(
         ec_model.copy(),
-        index=raw_proteomics["uniprot"],
+        # the index should be the IDs of the proteins exactly as in the model!
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],
         vol=2.3,

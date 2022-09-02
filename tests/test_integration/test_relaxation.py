@@ -41,7 +41,8 @@ def test_relax_thermo_dgr_and_proteins_works(
     raw_proteomics = pd.read_csv(experimental_copy_number)
     ec_model = from_copy_number(
         ec_model_core.copy(),
-        index=raw_proteomics["uniprot"],
+        # proteins in the model are in prot_UNIPROT form
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],
         vol=2.3,
@@ -66,7 +67,8 @@ def test_relax_thermo_dgr_and_proteins_works(
     assert status == "optimal"
     ec_model = from_copy_number(
         ec_model_core.copy(),
-        index=raw_proteomics["uniprot"],
+        # proteins in the model are in prot_UNIPROT form
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],
         vol=2.3,
@@ -93,7 +95,8 @@ def test_relax_concentrations_and_proteins_works(
     raw_proteomics = pd.read_csv(experimental_copy_number)
     ec_model = from_copy_number(
         ec_model_core.copy(),
-        index=raw_proteomics["uniprot"],
+        # proteins in the model are in prot_UNIPROT form
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],
         vol=2.3,

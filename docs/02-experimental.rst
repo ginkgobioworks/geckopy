@@ -30,7 +30,8 @@ Experimental data
     
     ec_model_exp = geckopy.experimental.from_copy_number(
         ec_model,
-        index=raw_proteomics["uniprot"],
+        # the index should be the IDs of the proteins exactly as in the model!
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies = raw_proteomics["copies_per_cell"], 
         stdev = raw_proteomics["stdev"],
         vol=2.3, dens=1.105e-12, water=0.3
