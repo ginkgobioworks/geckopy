@@ -30,11 +30,11 @@ from geckopy.experimental.relaxation import (
 def test_ec_model_from_copy_number_reduces_grow(
     ec_model_core, experimental_copy_number
 ):
-    """Test that constraining the model works."""
+    """Test that experimentally constraining the model works."""
     raw_proteomics = pd.read_csv(experimental_copy_number)
     ec_model = from_copy_number(
         ec_model_core,
-        index=raw_proteomics["uniprot"],
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],
         vol=2.3,
@@ -45,11 +45,17 @@ def test_ec_model_from_copy_number_reduces_grow(
     assert sol < 0.1 if not isnan(sol) else True
 
 
-def test_model_from_mmol_gDW_can_grow(ec_model_core, experimental_mmol_gDW):
-    """Test that constraining the model works."""
-    processed_proteomics = pd.read_csv(experimental_mmol_gDW)
+def test_model_from_mmol_gDW_cannot_grow(ec_model_core, experimental_mmol_gDW):
+    """Test that experimentally constraining the model reduces the objective value."""
+    processed_proteomics: pd.DataFrame = pd.read_csv(experimental_mmol_gDW)
+    # proteins ID in the model are "prot_UNIPROT"
+    processed_proteomics.index = processed_proteomics["uniprot"].apply(
+        lambda x: f"prot_{x}"
+    )
+    processed_proteomics: pd.Series = processed_proteomics["mmol_per_cell"]
     ec_model = from_mmol_gDW(ec_model_core, processed_proteomics)
-    assert ec_model.slim_optimize() > 0.0
+    objective_value = ec_model.slim_optimize()
+    assert (objective_value < 0.1) if not isnan(objective_value) else True
 
 
 def test_relaxed_ec_model_from_copy_number_can_grow(
@@ -57,9 +63,10 @@ def test_relaxed_ec_model_from_copy_number_can_grow(
 ):
     """Test that constraining the model works."""
     raw_proteomics = pd.read_csv(experimental_copy_number)
+    # proteins ID in the model are "prot_UNIPROT"
     ec_model = from_copy_number(
         ec_model_core,
-        index=raw_proteomics["uniprot"],
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],
         vol=2.3,
@@ -85,7 +92,7 @@ def test_irreductibly_relaxed_ec_model_from_copy_number_can_grow(
     raw_proteomics = pd.read_csv(experimental_copy_number)
     ec_model = from_copy_number(
         ec_model_core,
-        index=raw_proteomics["uniprot"],
+        index=raw_proteomics["uniprot"].apply(lambda x: f"prot_{x}"),
         cell_copies=raw_proteomics["copies_per_cell"],
         stdev=raw_proteomics["stdev"],
         vol=2.3,

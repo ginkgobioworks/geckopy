@@ -14,6 +14,9 @@
 
 """Loading experimental data."""
 
+import logging
+from typing import Union
+
 import cobra
 import pandas as pd
 
@@ -21,10 +24,11 @@ from geckopy.model import Model
 
 
 __all__ = ["limit_proteins", "from_mmol_gDW", "from_copy_number"]
+LOGGER = logging.getLogger(__name__)
 
 
-def limit_proteins(model: cobra.Model, measurements: pd.DataFrame):
-    """Apply proteomics `measurements` to `model`.
+def limit_proteins(model: Union[Model, cobra.Model], measurements: pd.Series):
+    """Apply proteomics `measurements` to `model` (in-place).
 
     Adapted from
     https://github.com/DD-DeCaF/simulations/blob/devel/src/simulations/modeling/driven.py
@@ -33,34 +37,57 @@ def limit_proteins(model: cobra.Model, measurements: pd.DataFrame):
     ----------
     model: cobra.Model (or geckopy.Model)
         The enzyme-constrained model.
-    measurements : pd.DataFrame
+    measurements: pd.Series
         Protein abundances in mmol / gDW.
+        - Index: protein ID as it appears in the models.
+        - Values: protein abundance in mmol / gDW
+
+    Returns
+    -------
+    applied_measurements: int
+        number of proteins that were effectively constrained in the model
+
+    Warnings
+    --------
+    A warning will be logged If a protein in the measurements cannot be found
+    in the model.
 
     """
     is_ec_model = hasattr(model, "proteins")
+    applied_measurements = 0
     for protein_id, measure in measurements.items():
         try:
             rxn = (
-                model.proteins.get_by_id(f"prot_{protein_id}")
+                model.proteins.get_by_id(protein_id)
                 if is_ec_model
-                else model.reactions.get_by_id(f"prot_{protein_id}_exchange")
+                else model.reactions.get_by_id(f"{protein_id}_exchange")
             )
         except KeyError:
-            pass
+            LOGGER.warn(
+                f"protein {protein_id} from measurements was not found in the model"
+            )
         else:
             # update only upper_bound (as enzymes can be unsaturated):
             if is_ec_model:
                 rxn.concentration = measure
             else:
                 rxn.upper_bound = measure
+            applied_measurements += 1
+    return applied_measurements
 
 
-def from_mmol_gDW(
-    model: cobra.Model, processed_proteomics: pd.DataFrame
-) -> cobra.Model:
-    """Apply proteomics constraints to model and return the copied EC model."""
+def from_mmol_gDW(model: cobra.Model, processed_proteomics: pd.Series) -> cobra.Model:
+    """Apply proteomics constraints to model and return the copied EC model.
+
+    Parameters
+    ----------
+    measurements: pd.Series
+        Protein abundances in mmol / gDW.
+        - Index: protein ID as it appears in the models.
+        - Values: protein abundance in mmol / gDW
+    """
     ec_model = Model(model.copy())
-    limit_proteins(ec_model, processed_proteomics)
+    _ = limit_proteins(ec_model, processed_proteomics)
     return ec_model
 
 
