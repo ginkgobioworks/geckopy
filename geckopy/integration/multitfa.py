@@ -97,7 +97,6 @@ class ThermoProtModel(tmodel):
                 updated_model=self,
             )
             # proteins do not participate in dGf calculations
-            new_prot.is_ignore = True
             self.proteins.append(new_prot)
 
         self.reactions = DictList()
