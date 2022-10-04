@@ -23,7 +23,7 @@ from pytfa.io import load_thermoDB
 
 from geckopy.experimental import from_copy_number
 from geckopy.experimental.relaxation import Objective_rule
-from geckopy.integration import (
+from geckopy.integration.relaxation import (
     relax_thermo_concentrations_proteins,
     relax_thermo_proteins,
 )
