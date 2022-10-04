@@ -4,7 +4,10 @@ from optlang import available_solvers
 from geckopy.integration.multitfa import ThermoProtModel
 
 
-@pytest.mark.skipif(not (available_solvers["GUROBI"] or available_solvers["CPLEX"]), reason="No quadratic programming available")
+@pytest.mark.skipif(
+    not (available_solvers["GUROBI"] or available_solvers["CPLEX"]),
+    reason="No quadratic programming available",
+)
 def test_protein_constrain_affects_multitfa_solution(ec_model_core):
     """Check thermo model returns different solution when protein is constrained."""
     thermo_model = ThermoProtModel(ec_model_core.copy())

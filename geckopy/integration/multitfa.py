@@ -1,10 +1,9 @@
 from copy import copy, deepcopy
 
-import geckopy
 from cobra.core.dictlist import DictList
+from multitfa.core import Thermo_met, thermo_reaction, tmodel
 
-from multitfa.core import tmodel
-from multitfa.core import Thermo_met, thermo_reaction
+import geckopy
 
 
 class ThermoProtReaction(thermo_reaction):
@@ -34,7 +33,11 @@ class ThermoProtReaction(thermo_reaction):
         self._metabolites = {}
         for met, stoic in cobra_rxn._metabolites.items():
             # this is the only change; also account for proteins
-            new_met = self.model.metabolites.get_by_id(met.id) if met in self.model.metabolites else self.model.proteins.get_by_id(met.id)
+            new_met = (
+                self.model.metabolites.get_by_id(met.id)
+                if met in self.model.metabolites
+                else self.model.proteins.get_by_id(met.id)
+            )
             self._metabolites[new_met] = stoic
             new_met._reaction.add(self)
         self._genes = set()
