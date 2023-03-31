@@ -453,7 +453,6 @@ class Model(cobra.Model):
         # Make sure proteins exist in model
         protein_list = [x for x in protein_list if x.id in self.proteins]
         for x in protein_list:
-
             # remove reference to the protein in all groups
             associated_groups = self.get_associated_groups(x)
             for group in associated_groups:
