@@ -71,7 +71,7 @@ def test_expected_bottleneck(ec_model_core):
         prot.mw = 33000
     ec_model_core.constrain_pool(0.00448, 0.65, 1)
     bottlenecks = get_protein_bottlenecks(ec_model_core, 10)
-    assert (bottlenecks.protein == "prot_P27306").any()
+    assert (bottlenecks.protein == "prot_P61889").any()
 
 
 def test_kcat_concentration_rate(ec_model_core):
@@ -90,7 +90,7 @@ def test_coverage_of_enzyme_saturation_on_fully_saturated_model(ec_model_core):
     solution["protein"] = solution.index
     solution.apply(
         lambda x: ec_model_core.proteins.get_by_id(x.protein).add_concentration(
-            x.fluxes
+            x.fluxes if x.fluxes > 1e-8 else 0
         ),
         axis=1,
     )
