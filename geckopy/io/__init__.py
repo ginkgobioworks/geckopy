@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .sbml import EcStoichiometry, read_sbml_ec_model, write_sbml_ec_model
-from .standard import group_proteins
+from .sbml import read_sbml_ec_model, write_sbml_ec_model
+from .standard import EcStoichiometry, group_proteins
