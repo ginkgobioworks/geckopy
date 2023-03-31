@@ -18,6 +18,7 @@ import os
 import pytest
 
 import geckopy
+from geckopy.experimental.molecular_weights import extract_proteins
 
 
 def test_read_geckopy_from_file(path_ecoli_core):
@@ -65,6 +66,27 @@ def test_serialized_model_grows(slim_solution_core, ec_model_core):
         slim_solution_core
     )
     os.remove("_tmpfull.xml")
+
+
+def test_writing_with_mw_kcat_produces_same_solution(slim_solution_core, ec_model_core):
+    """Check that deserialized model with GECKO 3.0 grows at the same rate."""
+    df = extract_proteins(ec_model_core)
+    for row in df.itertuples():
+        ec_model_core.proteins.get_by_id(row[2]).mw = row[3]
+    geckopy.io.write_sbml_ec_model(
+        ec_model_core,
+        "_tmpfull_mwkcat.xml",
+        ec_stoichiometry=geckopy.io.EcStoichiometry.MW_KCAT,
+    )
+    redeserialized = geckopy.io.read_sbml_ec_model(
+        "_tmpfull_mwkcat.xml",
+        hardcoded_rev_reactions=False,
+        ec_stoichiometry=geckopy.io.EcStoichiometry.MW_KCAT,
+    )
+    assert pytest.approx(redeserialized.slim_optimize()) == pytest.approx(
+        slim_solution_core
+    )
+    os.remove("_tmpfull_mwkcat.xml")
 
 
 def test_serialized_model_has_concentrations(dummy_ec_model):
