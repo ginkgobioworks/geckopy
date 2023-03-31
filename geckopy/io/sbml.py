@@ -686,7 +686,6 @@ def read_sbml_ec_model(
             model.getListOfReactions(),
             model_groups.getListOfGroups(),
         ]:
-
             for sbase in obj_list:  # type: libsbml.SBase
                 if sbase.isSetId():
                     sid_map[sbase.getIdAttribute()] = sbase
@@ -1120,7 +1119,6 @@ def write_sbml_ec_model(
         # GPR
         gpr = cobra_reaction.gene_reaction_rule
         if gpr is not None and len(gpr) > 0:
-
             # replace ids in string
             if f_replace and F_GENE_REV in f_replace:
                 gpr = gpr.replace("(", "( ")
