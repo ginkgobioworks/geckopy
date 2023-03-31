@@ -19,7 +19,7 @@ import re
 from itertools import chain
 from math import isnan
 from multiprocessing import Pool
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import cobra
 import pandas as pd
@@ -154,8 +154,8 @@ def fix_reaction_to_min(model: cobra.Model, reac: cobra.Reaction) -> Tuple[str, 
 
 def flux_variability_analysis(
     ec_model: Model,
-    fixed_reactions: Optional[List[str]] = None,
-    ignored_reactions: Optional[List[str]] = None,
+    fixed_reactions: Optional[Union[List[str], str]] = None,
+    ignored_reactions: Optional[Union[List[str], str]] = None,
     n_proc: Optional[int] = config.processes,
     inplace: bool = False,
 ) -> pd.DataFrame:
