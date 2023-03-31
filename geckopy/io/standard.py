@@ -16,11 +16,19 @@
 
 import warnings
 from collections import Counter
+from enum import Enum
 from typing import List, Optional, Union
 
 from cobra.core.group import Group
 
 from geckopy.model import Model, Protein
+
+
+class EcStoichiometry(Enum):
+    """Fashion of stoichiometric coeffients for enzymes (GECKO < or >= 3.0)."""
+
+    KCAT = "KCAT"
+    MW_KCAT = "MW_KCAT"
 
 
 def group_proteins(

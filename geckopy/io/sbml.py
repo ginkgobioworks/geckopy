@@ -29,6 +29,7 @@ import warnings
 from collections import defaultdict
 from math import isnan
 from pathlib import Path
+from typing import Type
 
 import libsbml
 from cobra import Configuration
@@ -75,7 +76,7 @@ from geckopy.model import Model
 from geckopy.protein import Protein
 from geckopy.reaction import Reaction
 
-from .standard import group_proteins
+from .standard import EcStoichiometry, group_proteins
 
 
 __all__ = ["read_sbml_ec_model", "write_sbml_ec_model"]
@@ -93,14 +94,15 @@ PROT_EX_PATTERN = re.compile(
 
 def read_sbml_ec_model(
     filename: str,
-    number: float = float,
+    number: Type = float,
     # re.Pattern does not exist in py36 so this type hint cannot be added now
     f_replace=F_REPLACE,
     set_missing_bounds: bool = False,
     hardcoded_rev_reactions: bool = True,
+    ec_stoichiometry: EcStoichiometry = EcStoichiometry.KCAT,
     **kwargs,
 ) -> Model:
-    """Create `geckopy.Model` from SBMLDocument.
+    r"""Create `geckopy.Model` from SBMLDocument.
 
     Parameters
     ----------
@@ -112,6 +114,16 @@ def read_sbml_ec_model(
     hardcoded_rev_reactions: bool
         if reversible reaction to account for proteins being consumed on both
         directions are written explicitly for in the SBML
+    ec_stoichiometry: EcStoichiometry, default=EcStoichiometry.KCAT
+        if KCAT, enzyme stoichiometric coefficients are $\frac{1}{k_{cat}}$.
+        Else, enzyme stoichiometric coefficients are $\frac{M_w}{k_{cat}}$ (compatible
+        with GECKO 3).
+
+    Raises
+    ------
+    IOError:
+        if `ec_stoichiometry `is `MW_KCAT `and a protein does not have a
+        "mw" field in the annotation.
 
     Returns
     -------
@@ -301,8 +313,15 @@ def read_sbml_ec_model(
         if not PROT_PATTERN.match(met.id):
             metabolites.append(met)
         else:
-            proteins.append(Protein(met, concentration=initial_amount))
-
+            prot = Protein(met, concentration=initial_amount)
+            if ec_stoichiometry == EcStoichiometry.MW_KCAT:
+                if "mw" not in met.annotation:
+                    raise IOError(
+                        "GECKO 3.0 format expects molecular weights in every"
+                        f"protein, missing for {met.id}"
+                    )
+                prot.mw = met.annotation["mw"]
+            proteins.append(prot)
     geckopy_model.add_metabolites(metabolites)
     geckopy_model.add_proteins(proteins)
 
@@ -528,6 +547,12 @@ def read_sbml_ec_model(
             )
             metabolite = target_set.get_by_id(met_id)
             object_stoichiometry[metabolite] = stoichiometry[met_id]
+            # TODO: remove this and make geckopy work with Mw/kcat
+            # turn Mw/kcat to 1/kcat as used by geckopy
+            if ec_stoichiometry == EcStoichiometry.MW_KCAT and isinstance(
+                metabolite, Protein
+            ):
+                object_stoichiometry[metabolite] /= float(metabolite.mw)
         cobra_reaction.add_metabolites(object_stoichiometry)
 
         # GPR
@@ -778,8 +803,9 @@ def write_sbml_ec_model(
     f_replace=F_REPLACE,
     units=True,
     group_untyped_proteins: bool = True,
+    ec_stoichiometry: EcStoichiometry = EcStoichiometry.KCAT,
 ):
-    """Write cobra model to filename.
+    r"""Write cobra model to filename.
 
     Enzyme constraint changes: proteins are written as metabolites with
     initialAmount.
@@ -816,6 +842,16 @@ def write_sbml_ec_model(
         if True (default) the proteins whose id is not compliant with Uniprot
         and which are not part of the :code:`Protein` group will be added to it.
         This is an inplace operation!
+    ec_stoichiometry: EcStoichiometry, default=EcStoichiometry.KCAT
+        if KCAT, enzyme stoichiometric coefficients will be written as $\frac{1}{k_{cat}}$.
+        Else, enzyme stoichiometric coefficients will be written as $\frac{M_w}{k_{cat}}$ (compatible
+        with GECKO 3).
+
+    Raises
+    ------
+    IOError:
+        if `ec_stoichiometry `is `MW_KCAT `and a protein does not have a
+        "mw" field in the annotation.
     """
     cobra_model = ec_model
     protein_pool_metabolite = None
@@ -957,6 +993,17 @@ def write_sbml_ec_model(
         _sbase_notes_dict(specie, metabolite.notes)
 
     for metabolite in ec_model.proteins:
+        print(metabolite.id)
+        if metabolite.mw:
+            metabolite.annotation["mw"] = metabolite.mw
+        if (
+            ec_stoichiometry == EcStoichiometry.MW_KCAT
+            and "mw" not in metabolite.annotation
+        ):
+            raise IOError(
+                f"Mw not found in annotation of {metabolite.id} when MW_KCAT"
+                " was specified. Try adding molecular weights before writing"
+            )
         specie: libsbml.Species = model.createSpecies()
         specie.setId(
             f_replace[F_SPECIE_REV](metabolite.id)
@@ -1023,6 +1070,13 @@ def write_sbml_ec_model(
             sid = metabolite.id
             if f_replace and F_SPECIE_REV in f_replace:
                 sid = f_replace[F_SPECIE_REV](sid)
+            st_coeff = stoichiometry
+            # TODO: reverse this and make geckopy work with Mw/kcat
+            # turn 1/kcat to Mw/kcat as used by GECKO 3.0
+            if ec_stoichiometry == EcStoichiometry.MW_KCAT and isinstance(
+                metabolite, Protein
+            ):
+                st_coeff *= metabolite.mw
             if stoichiometry < 0:
                 sref = (
                     reaction.createReactant()
