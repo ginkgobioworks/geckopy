@@ -229,7 +229,7 @@ def flux_variability_analysis(
             raise UserInputModelClash(f"{reac} to be fixed is not in model {model.id}.")
         reac_to_fix, lb = fix_reaction_to_min(model, model.reactions.get_by_id(reac))
         model.reactions.get_by_id(reac_to_fix).bounds = lb, lb
-        fva_result.at[reac, :] = (-lb, -lb) if reac != reac_to_fix else (lb, lb)
+        fva_result.loc[reac, :] = [-lb, -lb] if reac != reac_to_fix else [lb, lb]
     LOGGER.debug(
         f"FVA started for a model with {len(model.reactions)} and"
         f"{len(reac_ids)} effective reactions"
@@ -247,7 +247,7 @@ def flux_variability_analysis(
                 total=len(reac_ids),
                 desc="FVA",
             ):
-                fva_result.at[rxn_id, :] = lb, ub
+                fva_result.loc[rxn_id, :] = [lb, ub]
     else:
         _init_worker(model)
         for rxn_id, lb, ub in tqdm(
@@ -255,7 +255,7 @@ def flux_variability_analysis(
             total=len(reac_ids),
             desc="FVA",
         ):
-            fva_result.at[rxn_id, :] = lb, ub
+            fva_result.loc[rxn_id, :] = [lb, ub]
 
     return fva_result
 
@@ -327,7 +327,7 @@ def protein_variability_analysis(
                 total=len(proteins),
                 desc="FVA",
             ):
-                fva_result.at[rxn_id, :] = lb, ub
+                fva_result.loc[rxn_id, :] = lb, ub
     else:
         _init_worker(model, "proteins")
         for rxn_id, lb, ub in tqdm(
@@ -335,7 +335,7 @@ def protein_variability_analysis(
             total=len(proteins),
             desc="FVA",
         ):
-            fva_result.at[rxn_id, :] = lb, ub
+            fva_result.loc[rxn_id, :] = lb, ub
     return fva_result
 
 
