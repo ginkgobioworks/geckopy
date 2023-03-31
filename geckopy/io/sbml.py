@@ -843,9 +843,9 @@ def write_sbml_ec_model(
         and which are not part of the :code:`Protein` group will be added to it.
         This is an inplace operation!
     ec_stoichiometry: EcStoichiometry, default=EcStoichiometry.KCAT
-        if KCAT, enzyme stoichiometric coefficients will be written as $\frac{1}{k_{cat}}$.
-        Else, enzyme stoichiometric coefficients will be written as $\frac{M_w}{k_{cat}}$ (compatible
-        with GECKO 3).
+        if KCAT, enzyme stoichiometric coefficients will be written as
+        $\frac{1}{k_{cat}}$. Else, enzyme stoichiometric coefficients will
+        be written as $\frac{M_w}{k_{cat}}$ (compatible with GECKO 3).
 
     Raises
     ------
@@ -857,7 +857,9 @@ def write_sbml_ec_model(
     protein_pool_metabolite = None
     protein_pool_exchange = None
     if hasattr(ec_model, "protein_pool_exchange"):
-        warnings.warn("Protein pool will not be serialized to the SBML document.")
+        warnings.warn(
+            "Protein pool will not be serialized to the SBML document.", stacklevel=2
+        )
         protein_pool_metabolite = ec_model.common_protein_pool
         protein_pool_exchange = ec_model.protein_pool_exchange
     if f_replace is None:

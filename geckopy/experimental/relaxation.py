@@ -360,6 +360,6 @@ def relax_proteomics_greedy(
             f"Final growth of the model: {new_growth_rate}"
         )
         LOGGER.warn(message)
-        warnings.warn(message)
+        warnings.warn(message, stacklevel=2)
 
     return new_growth_rate, prots_to_remove

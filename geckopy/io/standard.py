@@ -65,7 +65,10 @@ def annotate_gene_protein_rules(model: Model):
     more thought should be put in how to make the GPR into something typed in the
     SBML doc that relates to the actual data structures in the model.
     """
-    warnings.warn("This function is experimental and subject to change in the future.")
+    warnings.warn(
+        "This function is experimental and subject to change in the future.",
+        stacklevel=2,
+    )
     # add empty attributes for the proteins for consistency
     for prot in model.proteins:
         prot.gene = None
