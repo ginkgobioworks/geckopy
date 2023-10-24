@@ -17,6 +17,7 @@
 import gzip
 import io
 import re
+from collections import defaultdict
 from time import sleep
 from typing import Callable, Dict, List, Optional
 
@@ -87,6 +88,9 @@ def _molecular_weight(seq: str) -> float:
     """
     seq = "".join(str(seq).split()).upper()  # Do the minimum formatting
     weight_table = protein_weights
+    weight_table = defaultdict(
+        lambda: sum(weight_table.values()) / len(weight_table), weight_table
+    )
     water = 18.010565
 
     try:
