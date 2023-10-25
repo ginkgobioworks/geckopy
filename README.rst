@@ -15,6 +15,8 @@ the modeling capabilities in genome-scale models.
 
    Based on `Sánchez et al., 2017`_.
 
+   Citing geckopy: `Carrasco et al., 2023`_.
+
 
 Check https://github.com/SysBioChalmers/GECKO for the matlab counterpart.
 
@@ -90,5 +92,6 @@ for inclusion in the work by you, as defined in the Apache-2.0 license, shall
 be licensed as above, without any additional terms or conditions.
 
 .. _Sánchez et al., 2017: https://dx.doi.org/10.15252/msb.20167411
+.. _Carrasco et al., 2023: https://doi.org/10.1128/spectrum.01705-23
 .. _LICENSE: ./LICENSE
 .. _virtualenv: https://pypi.python.org/pypi/virtualenv
