@@ -273,7 +273,7 @@ or the thermodynamic constraint, see the
     )
     # constrain the model objective so that the feashibility relaxation recovers growth
     tmodel_prot.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = solution.objective_value
-    iis, status = geckopy.integration.relax_thermo_proteins(
+    iis, status = geckopy.integration.relaxation.relax_thermo_proteins(
         tmodel_prot, 
         prot_candidates=[prot.id for prot in tmodel_prot.proteins], 
         objective_rule=geckopy.experimental.relaxation.Objective_rule.MIN_ELASTIC_SUM
