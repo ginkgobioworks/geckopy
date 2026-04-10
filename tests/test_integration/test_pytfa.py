@@ -13,13 +13,15 @@
 # limitations under the License.
 
 """Test main functionality."""
+
 import os
 
 import pytest
-import pytfa
-from pytfa.io import load_thermoDB
 
-from geckopy.integration.pytfa import (
+pytfa = pytest.importorskip("pytfa")
+from pytfa.io import load_thermoDB  # noqa: E402
+
+from geckopy.integration.pytfa import (  # noqa: E402
     adapt_gecko_to_thermo,
     get_thermo_coverage,
     translate_model_mnx_to_seed,

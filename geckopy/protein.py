@@ -32,7 +32,6 @@ from cobra.util.solver import (
 )
 from cobra.util.util import format_long_string
 
-
 LOGGER = logging.getLogger(__name__)
 UNIPROT_PATTERN = re.compile(
     r"(?:prot_)?[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}"
@@ -518,9 +517,9 @@ class Kcats:
         model.constraints[self._protein.id].set_linear_coefficients(
             {
                 reac.forward_variable: coefficient,
-                reac.reverse_variable: coefficient
-                if non_splitted_reaction
-                else -coefficient,
+                reac.reverse_variable: (
+                    coefficient if non_splitted_reaction else -coefficient
+                ),
             }
         )
 

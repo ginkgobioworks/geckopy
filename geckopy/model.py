@@ -31,7 +31,6 @@ from optlang.symbolics import Zero
 from .protein import Protein
 from .reaction import Reaction
 
-
 LOGGER = logging.getLogger(__name__)
 
 

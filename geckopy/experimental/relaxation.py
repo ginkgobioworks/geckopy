@@ -32,7 +32,6 @@ import sympy
 
 from geckopy.model import Model
 
-
 __all__ = [
     "apply_proteomics_relaxation",
     "apply_proteomics_elastic_relaxation",
@@ -190,11 +189,15 @@ def get_upper_relaxation(
     model.slim_optimize()
     status = model.solver.status
     # CPLEX may just error out if a var of an infeasible problem is accessed
-    return {
-        v.name[2:]
-        for v in objective_vars
-        if abs(v.primal) > 0 and v.name.startswith("V_")
-    } if status == "optimal" else set(), status
+    return (
+        {
+            v.name[2:]
+            for v in objective_vars
+            if abs(v.primal) > 0 and v.name.startswith("V_")
+        }
+        if status == "optimal"
+        else set()
+    ), status
 
 
 def elastic_upper_relaxation(
@@ -279,7 +282,7 @@ def top_shadow_prices(
         protein_set if protein_set is not None else solution.shadow_prices.index
     )
     shadow_pr = solution.shadow_prices
-    return shadow_pr[protein_set].sort_values()[:top]
+    return shadow_pr[list(protein_set)].sort_values()[:top]
 
 
 def relax_proteomics_greedy(

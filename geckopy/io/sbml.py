@@ -33,7 +33,7 @@ from typing import Type
 
 import libsbml
 from cobra import Configuration
-from cobra.core.gene import parse_gpr
+from cobra.core.gene import GPR
 from cobra.io.sbml import (
     BOUND_MINUS_INF,
     BOUND_PLUS_INF,
@@ -77,7 +77,6 @@ from geckopy.protein import Protein
 from geckopy.reaction import Reaction
 
 from .standard import EcStoichiometry, group_proteins
-
 
 __all__ = ["read_sbml_ec_model", "write_sbml_ec_model"]
 
@@ -167,7 +166,7 @@ def read_sbml_ec_model(
 
         if fbc_version == 1:
             LOGGER.warning(
-                "Loading SBML with fbc-v1 (models should be encoded" " using fbc-v2)"
+                "Loading SBML with fbc-v1 (models should be encoded using fbc-v2)"
             )
             conversion_properties = libsbml.ConversionProperties()
             conversion_properties.addOption(
@@ -205,9 +204,9 @@ def read_sbml_ec_model(
                 {
                     "familyName": c.getFamilyName() if c.isSetFamilyName() else None,
                     "givenName": c.getGivenName() if c.isSetGivenName() else None,
-                    "organisation": c.getOrganisation()
-                    if c.isSetOrganisation()
-                    else None,
+                    "organisation": (
+                        c.getOrganisation() if c.isSetOrganisation() else None
+                    ),
                     "email": c.getEmail() if c.isSetEmail() else None,
                 }
             )
@@ -220,14 +219,13 @@ def read_sbml_ec_model(
     info = "<{}> SBML L{}V{}".format(model_id, model.getLevel(), model.getVersion())
     packages = {}
     for k in range(doc.getNumPlugins()):
-        plugin = doc.getPlugin(k)  # type:libsbml.SBasePlugin
+        plugin = doc.getPlugin(k)  # type: libsbml.SBasePlugin
         key, value = plugin.getPackageName(), plugin.getPackageVersion()
         packages[key] = value
         info += ", {}-v{}".format(key, value)
         if key not in ["fbc", "groups", "l3v2extendedmath"]:
             LOGGER.warning(
-                "SBML package '%s' not supported by cobrapy, "
-                "information is not parsed",
+                "SBML package '%s' not supported by cobrapy, information is not parsed",
                 key,
             )
     meta["info"] = info
@@ -455,7 +453,7 @@ def read_sbml_ec_model(
                     cobra_reaction.lower_bound = p_lb.getValue()
                 else:
                     raise CobraSBMLError(
-                        "No constant bound '%s' for " "reaction: %s" % (p_lb, reaction)
+                        "No constant bound '%s' for reaction: %s" % (p_lb, reaction)
                     )
 
             ub_id = r_fbc.getUpperFluxBound()
@@ -465,7 +463,7 @@ def read_sbml_ec_model(
                     cobra_reaction.upper_bound = p_ub.getValue()
                 else:
                     raise CobraSBMLError(
-                        "No constant bound '%s' for " "reaction: %s" % (p_ub, reaction)
+                        "No constant bound '%s' for reaction: %s" % (p_ub, reaction)
                     )
 
         elif reaction.isSetKineticLaw():
@@ -495,7 +493,7 @@ def read_sbml_ec_model(
             lower_bound = config.lower_bound
             cobra_reaction.lower_bound = lower_bound
             LOGGER.warning(
-                "Missing lower flux bound set to '%s' for " " reaction: '%s'",
+                "Missing lower flux bound set to '%s' for  reaction: '%s'",
                 lower_bound,
                 reaction,
             )
@@ -505,7 +503,7 @@ def read_sbml_ec_model(
             upper_bound = config.upper_bound
             cobra_reaction.upper_bound = upper_bound
             LOGGER.warning(
-                "Missing upper flux bound set to '%s' for " " reaction: '%s'",
+                "Missing upper flux bound set to '%s' for  reaction: '%s'",
                 upper_bound,
                 reaction,
             )
@@ -589,7 +587,7 @@ def read_sbml_ec_model(
         # remove outside parenthesis, if any
         if gpr.startswith("(") and gpr.endswith(")"):
             try:
-                parse_gpr(gpr[1:-1].strip())
+                GPR(string_gpr=gpr[1:-1].strip())
                 gpr = gpr[1:-1].strip()
             except (SyntaxError, TypeError) as e:
                 LOGGER.warning(
@@ -630,7 +628,7 @@ def read_sbml_ec_model(
                 try:
                     objective_reaction = geckopy_model.reactions.get_by_id(rid)
                 except KeyError:
-                    raise CobraSBMLError("Objective reaction '%s' " "not found" % rid)
+                    raise CobraSBMLError("Objective reaction '%s' not found" % rid)
                 try:
                     coefficients[objective_reaction] = number(flux_obj.getCoefficient())
                 except ValueError as e:
@@ -650,9 +648,7 @@ def read_sbml_ec_model(
                     try:
                         objective_reaction = geckopy_model.reactions.get_by_id(rid)
                     except KeyError:
-                        raise CobraSBMLError(
-                            "Objective reaction '%s' " "not found", rid
-                        )
+                        raise CobraSBMLError("Objective reaction '%s' not found", rid)
                     try:
                         coefficients[objective_reaction] = number(p_oc.getValue())
                     except ValueError as e:
@@ -668,7 +664,7 @@ def read_sbml_ec_model(
 
     if len(coefficients) == 0:
         LOGGER.error(
-            "No objective coefficients in model. Unclear what should " "be optimized"
+            "No objective coefficients in model. Unclear what should be optimized"
         )
     set_objective(geckopy_model, coefficients)
     geckopy_model.solver.objective.direction = obj_direction
@@ -931,7 +927,7 @@ def write_sbml_ec_model(
 
     # Units
     if units:
-        flux_udef = model.createUnitDefinition()  # type:libsbml.UnitDefinition
+        flux_udef = model.createUnitDefinition()  # type: libsbml.UnitDefinition
         flux_udef.setId(UNITS_FLUX[0])
         for u in UNITS_FLUX[1]:
             unit = flux_udef.createUnit()  # type: libsbml.Unit

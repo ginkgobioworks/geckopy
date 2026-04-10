@@ -27,7 +27,6 @@ from pytfa.optim.variables import GenericVariable, LogConcentration
 
 import geckopy
 
-
 LOGGER = logging.getLogger(__name__)
 PROT_DATA = {
     "pKa": [7],

@@ -22,7 +22,6 @@ import pytest
 
 import geckopy
 
-
 config = cobra.Configuration()
 
 

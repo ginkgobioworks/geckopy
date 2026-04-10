@@ -30,7 +30,6 @@ from tqdm import tqdm
 
 from .model import Model
 
-
 LOGGER = logging.getLogger(__name__)
 config = cobra.Configuration()
 REV_PATTERN = re.compile(r"(No\d)|$")
@@ -74,9 +73,7 @@ def _sanitize_input_list(fixed_reactions: Optional[List[str]] = None) -> List:
     return (
         []
         if fixed_reactions is None
-        else [fixed_reactions]
-        if isinstance(fixed_reactions, str)
-        else fixed_reactions
+        else [fixed_reactions] if isinstance(fixed_reactions, str) else fixed_reactions
     )
 
 
@@ -98,8 +95,6 @@ def _fva_step(reaction_id):
     Modified from cobrapy to account for possibly duplicated (`_REV`) reactions
     in the EC model.
     """
-    global _model
-    global _target
     target = _model.__getattribute__(_target)
     reac = target.get_by_id(reaction_id)
     rev_id = _apply_rev(reaction_id, _model)

@@ -22,7 +22,6 @@ import pandas as pd
 
 from geckopy.model import Model
 
-
 __all__ = ["limit_proteins", "from_mmol_gDW", "from_copy_number"]
 LOGGER = logging.getLogger(__name__)
 

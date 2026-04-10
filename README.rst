@@ -1,9 +1,11 @@
 geckopy
 =======
 
-.. image:: https://github.com/ginkgobioworks/geckopy/actions/workflows/main.yml/badge.svg
-   :target: https://github.com/ginkgobioworks/geckopy/actions
+.. image:: https://github.com/ToruOkadaOi/geckopy/actions/workflows/main.yml/badge.svg
+   :target: https://github.com/ToruOkadaOi/geckopy/actions
    :alt: CI build
+
+Requires Python 3.10+
 
 **G**\ enome-scale model **E**\ nzyme **C**\ onstraints, using **K**\ inetics and 
 **O**\ mics in **py**\ thon.

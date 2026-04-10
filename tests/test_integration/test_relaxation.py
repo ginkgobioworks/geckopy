@@ -18,16 +18,17 @@ from math import isnan
 
 import pandas as pd
 import pytest
-import pytfa
-from pytfa.io import load_thermoDB
 
-from geckopy.experimental import from_copy_number
-from geckopy.experimental.relaxation import Objective_rule
-from geckopy.integration import (
+pytfa = pytest.importorskip("pytfa")
+from pytfa.io import load_thermoDB  # noqa: E402
+
+from geckopy.experimental import from_copy_number  # noqa: E402
+from geckopy.experimental.relaxation import Objective_rule  # noqa: E402
+from geckopy.integration import (  # noqa: E402
     relax_thermo_concentrations_proteins,
     relax_thermo_proteins,
 )
-from geckopy.integration.pytfa import adapt_gecko_to_thermo
+from geckopy.integration.pytfa import adapt_gecko_to_thermo  # noqa: E402
 
 
 def test_relax_thermo_dgr_and_proteins_works(

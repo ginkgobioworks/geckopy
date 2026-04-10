@@ -36,7 +36,6 @@ from tqdm import tqdm
 import geckopy
 from geckopy.experimental.relaxation import Objective_rule, change_constraint
 
-
 LOGGER = logging.getLogger(__name__)
 
 # this should be a double (AND) constrain not an OR
@@ -128,15 +127,17 @@ def relax_thermo_proteins(
     neg_series = get_solution_value_for_variables(relaxation, my_neg_slacks)
     pos_series = get_solution_value_for_variables(relaxation, my_pos_slacks)
     return (
-        {
-            v.name[2:]
-            for v in objective_symbols
-            if abs(v.primal) > 0 and (v.name.startswith("V_"))
-        }
-        | set(neg_series[neg_series.abs() > 0].index)
-        | set(pos_series[pos_series.abs() > 0].index)
-        if status == "optimal"
-        else set(),
+        (
+            {
+                v.name[2:]
+                for v in objective_symbols
+                if abs(v.primal) > 0 and (v.name.startswith("V_"))
+            }
+            | set(neg_series[neg_series.abs() > 0].index)
+            | set(pos_series[pos_series.abs() > 0].index)
+            if status == "optimal"
+            else set()
+        ),
         status,
     )
 
@@ -258,14 +259,16 @@ def relax_thermo_concentrations_proteins(
     neg_series = get_solution_value_for_variables(relaxation, my_neg_slacks)
     pos_series = get_solution_value_for_variables(relaxation, my_pos_slacks)
     return (
-        {
-            v.name[2:]
-            for v in objective_symbols
-            if abs(v.primal) > 0 and (v.name.startswith("V_"))
-        }
-        | set(neg_series[neg_series.abs() > 0].index)
-        | set(pos_series[pos_series.abs() > 0].index)
-        if status == "optimal"
-        else set(),
+        (
+            {
+                v.name[2:]
+                for v in objective_symbols
+                if abs(v.primal) > 0 and (v.name.startswith("V_"))
+            }
+            | set(neg_series[neg_series.abs() > 0].index)
+            | set(pos_series[pos_series.abs() > 0].index)
+            if status == "optimal"
+            else set()
+        ),
         status,
     )
